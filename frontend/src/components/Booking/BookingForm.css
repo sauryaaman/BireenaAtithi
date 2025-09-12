@@ -1,0 +1,324 @@
+.booking-form-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.booking-form-container h2 {
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.success-message {
+  color: #38a169;
+  margin-top: 5px;
+  font-size: 14px;
+  padding: 8px;
+  background-color: #c6f6d5;
+  border-radius: 4px;
+}
+
+.error-message {
+  color: #e53e3e;
+  margin-top: 5px;
+  font-size: 14px;
+  padding: 8px;
+  background-color: #fed7d7;
+  border-radius: 4px;
+}
+
+.add-room-btn {
+  background: #48bb78;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.add-room-btn:hover {
+  background: #38a169;
+}
+
+.booking-form {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.book-btn {
+  background-color: #2196F3;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.book-btn:hover {
+  background-color: #1976D2;
+  transform: translateY(-1px);
+}
+
+.checkin-btn {
+  background-color: #4CAF50;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.checkin-btn:hover {
+  background-color: #388E3C;
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.form-section {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+}
+
+.form-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.form-section h3 svg {
+  color: #2196F3;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  color: #666;
+}
+
+.form-group input,
+.form-group select,
+.date-picker {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.date-picker:focus {
+  border-color: #2196F3;
+  outline: none;
+}
+
+/* Booking Summary Styles */
+/* Room Selection Section */
+.room-selection-section {
+  background-color: #ffffff;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.room-selection-fields {
+  padding: 20px;
+  margin: 15px 0;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.room-selection-fields h4 {
+  font-size: 16px;
+  color: #1e293b;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.check-availability-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.check-availability-btn:hover {
+  background-color: #1976D2;
+}
+
+.no-rooms-message {
+  padding: 10px;
+  background-color: #fff4e6;
+  border: 1px solid #ffd8a8;
+  border-radius: 4px;
+  color: #c05621;
+  text-align: center;
+  margin-top: 5px;
+}
+
+/* Booking Summary */
+.booking-summary {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.booking-summary h4 {
+  font-size: 16px;
+  color: #1e293b;
+  margin-bottom: 15px;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.summary-table th,
+.summary-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.summary-table th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.summary-table tr:last-child td {
+  border-bottom: none;
+}
+
+.total-row {
+  font-weight: 600;
+  background-color: #f8fafc;
+}
+
+.total-row td {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.total-row td:last-child {
+  color: #2196F3;
+}
+
+/* Form Actions */
+.form-actions {
+  padding: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.form-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancel-btn {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.submit-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.submit-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.error-message {
+  padding: 10px;
+  margin-bottom: 20px;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+}
+
+/* Date Picker Customization */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.react-datepicker__input-container input:focus {
+  border-color: #2196F3;
+  outline: none;
+}
