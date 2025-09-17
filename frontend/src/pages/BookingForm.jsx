@@ -13,6 +13,7 @@ const BookingForm = () => {
   const [roomTypes, setRoomTypes] = useState([]);
   const [loading, setLoading] = useState('');  // Will store which button is loading
   const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState('');
   const [searchingRooms, setSearchingRooms] = useState(false);
   const [showGuestForms, setShowGuestForms] = useState(false);
   const [availableRooms, setAvailableRooms] = useState({});
@@ -20,6 +21,15 @@ const BookingForm = () => {
 
   const [bookingType, setBookingType] = useState('book');
   
+  // ID proof type options
+  const idProofTypes = [
+    { value: 'AADHAR', label: 'Aadhar Card' },
+    { value: 'PASSPORT', label: 'Passport' },
+    { value: 'DRIVING_LICENSE', label: 'Driving License' },
+    { value: 'VOTER_ID', label: 'Voter ID' },
+    { value: 'PAN_CARD', label: 'PAN Card' }
+  ];
+
   const [formData, setFormData] = useState({
     // Booking Details
     checkInDate: new Date(),
@@ -28,10 +38,17 @@ const BookingForm = () => {
     numberOfGuests: 1,
     totalAmount: 0,
     paymentStatus: 'UNPAID', // Initialize payment status
+    
+    // Guest Details
     customerName: '',
     phoneNumber: '',
     email: '',
-    idProof: '',
+    idProofType: 'AADHAR', // Default ID proof type
+    idProof: '', // ID proof number
+    gstNumber: '',
+    mealPlan: '', // Will be entered manually and stored in uppercase
+    
+    // Address Details
     addressLine1: '',
     addressLine2: '',
     city: '',
@@ -43,6 +60,15 @@ const BookingForm = () => {
     roomSelections: Array(1).fill({ roomType: '', roomId: '', price_per_night: 0 })
   });
   
+  // Additional guests data structure
+  const emptyGuest = {
+    name: '',
+    phone: '',
+    email: '',
+    id_proof_type: 'AADHAR',
+    id_proof: '',
+  };
+
   // Additional guests data
   const [additionalGuests, setAdditionalGuests] = useState([]);
 
@@ -86,11 +112,11 @@ const BookingForm = () => {
     
     try {
       const token = localStorage.getItem('token');
-      console.log('Searching for rooms with params:', {
-        roomType: selection.roomType,
-        checkIn: format(formData.checkInDate, 'yyyy-MM-dd'),
-        checkOut: format(formData.checkOutDate, 'yyyy-MM-dd')
-      });
+      // console.log('Searching for rooms with params:', {
+      //   roomType: selection.roomType,
+      //   checkIn: format(formData.checkInDate, 'yyyy-MM-dd'),
+      //   checkOut: format(formData.checkOutDate, 'yyyy-MM-dd')
+      // });
       
       const response = await axios.get(
         `${BASE_URL}/api/rooms/available`,
@@ -104,7 +130,7 @@ const BookingForm = () => {
         }
       );
 
-      console.log('Response from server:', response.data);
+      // console.log('Response from server:', response.data);
       
       if (!response.data.success) {
         setError(response.data.message || 'No rooms available');
@@ -282,141 +308,143 @@ const BookingForm = () => {
   };
 
     const handleSubmit = async (e, type) => {
-    e.preventDefault();
-    setLoading(type);
-    setError('');
+      e.preventDefault();
+      setLoading(type);
+      setError('');
 
-    // Validate room selections and payment status
-    const hasIncompleteRooms = formData.roomSelections.some(
-      selection => !selection.roomType || !selection.roomId
-    );
+      try {
+        // Validate room selections and payment status
+        const hasIncompleteRooms = formData.roomSelections.some(
+          selection => !selection.roomType || !selection.roomId
+        );
 
-    if (hasIncompleteRooms) {
-      setError('Please complete room selection for all rooms');
-      setLoading('');
-      return;
-    }
+        if (hasIncompleteRooms) {
+          throw new Error('Please complete room selection for all rooms');
+        }
 
-    if (!formData.paymentStatus) {
-      setError('Please select a payment status');
-      setLoading('');
-      return;
-    }    try {
-      const token = localStorage.getItem('token');
+        if (!formData.paymentStatus) {
+          throw new Error('Please select a payment status');
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Please login to continue');
+        }
       
-      // Primary guest data
-      const primaryGuest = {
-        name: formData.customerName,
-        phone: formData.phoneNumber,
-        email: formData.email,
-        id_proof: formData.idProof,
-        address_line1: formData.addressLine1,
-        address_line2: formData.addressLine2,
-        city: formData.city,
-        state: formData.state,
-        country: formData.country,
-        pin: formData.pin
-      };
+        // Primary guest data
+        const primaryGuest = {
+          name: formData.customerName,
+          phone: formData.phoneNumber,
+          email: formData.email,
+          id_proof_type: formData.idProofType,
+          id_proof: formData.idProof,
+          gst_number: formData.gstNumber || null,
+          meal_plan: formData.mealPlan,
+          address_line1: formData.addressLine1?.trim() || null,
+          address_line2: formData.addressLine2?.trim() || null,
+          city: formData.city?.trim() || null,
+          state: formData.state?.trim() || null,
+          country: formData.country?.trim() || null,
+          pin: formData.pin?.trim() || null
+        };
 
-      // Validate primary guest
-      if (!primaryGuest.name || !primaryGuest.phone || !primaryGuest.email) {
-        setError('Please fill in all primary guest details');
-        setLoading('');
-        return;
-      }
+        // Validate primary guest
+        if (!primaryGuest.name || !primaryGuest.phone || !primaryGuest.email) {
+          throw new Error('Please fill in all primary guest details');
+        }
 
-      // Filter out valid rooms and guests
-      const validRooms = formData.roomSelections.filter(
-        selection => selection.roomId && selection.roomType
-      );
+        // Filter out valid rooms and guests
+        const validRooms = formData.roomSelections.filter(
+          selection => selection.roomId && selection.roomType
+        );
 
-      const validGuests = additionalGuests.filter(
-        guest => guest.name && guest.id_proof
-      );
+        const validGuests = additionalGuests.filter(
+          guest => guest.name && guest.id_proof
+        );
 
-      // Validate rooms
-      if (!validRooms.length) {
-        setError('Please select at least one room');
-        setLoading('');
-        return;
-      }
+        // Validate rooms
+        if (!validRooms.length) {
+          throw new Error('Please select at least one room');
+        }
 
-      // Calculate total from all selected rooms
-      const totalAmount = validRooms.reduce((sum, room) => 
-        sum + (room.total_price || 0), 0
-      );
+        // Calculate total from all selected rooms
+        const totalAmount = validRooms.reduce((sum, room) => 
+          sum + (room.total_price || 0), 0
+        );
 
-      const bookingData = {
-        primary_guest: primaryGuest,
-        total_amount: totalAmount,
-        additional_guests: validGuests,
-        selected_rooms: validRooms.map(selection => ({
-          room_id: selection.roomId,
-          room_type: selection.roomType,
-          price_per_night: selection.price_per_night,
-          total_price: selection.total_price
-        })),
-        checkin_date: format(formData.checkInDate, 'yyyy-MM-dd'),
-        checkout_date: format(formData.checkOutDate, 'yyyy-MM-dd'),
-        number_of_guests: formData.numberOfGuests,
-        payment_status: formData.paymentStatus?.toUpperCase() || 'UNPAID',
-        status: type === 'checkin' ? 'CHECKED_IN' : 'BOOKED',
-        booking_status: type === 'checkin' ? 'CHECKED_IN' : 'BOOKED',
-        checkin_time: type === 'checkin' ? new Date().toISOString() : null,
-        is_checked_in: type === 'checkin' ? true : false
-      };
+        const bookingData = {
+          primary_guest: primaryGuest,
+          total_amount: totalAmount,
+          additional_guests: validGuests,
+          selected_rooms: validRooms.map(selection => ({
+            room_id: selection.roomId,
+            room_type: selection.roomType,
+            price_per_night: selection.price_per_night,
+            total_price: selection.total_price
+          })),
+          checkin_date: format(formData.checkInDate, 'yyyy-MM-dd'),
+          checkout_date: format(formData.checkOutDate, 'yyyy-MM-dd'),
+          number_of_guests: formData.numberOfGuests,
+          payment_status: formData.paymentStatus?.toUpperCase() || 'UNPAID',
+          is_immediate_checkin: type === 'checkin'
+        };
 
-      console.log('Sending booking data:', bookingData);
+        // console.log('Sending booking data:', bookingData);
 
-      let response;
-      if (type === 'checkin') {
-        // First create the booking
-        const bookingResponse = await axios.post(
+        // Single API call for both booking types
+        const response = await axios.post(
           `${BASE_URL}/api/bookings`,
           bookingData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        console.log('Booking created:', bookingResponse.data);
+        // console.log('Booking response:', response.data);
 
-        if (!bookingResponse.data.booking_id) {
+        if (!response.data.booking_id) {
           throw new Error('No booking ID received from server');
         }
 
-        // Then immediately check in using the booking ID
-        response = await axios.put(
-          `${BASE_URL}/api/bookings/${bookingResponse.data.booking_id}/checkin`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        if (response.data && response.data.success === false) {
+          throw new Error(response.data.error || 'Failed to create booking');
+        }
 
         // Broadcast event to refresh room status
         window.dispatchEvent(new CustomEvent('roomStatusChanged'));
-      } else {
-        // Regular booking
-        response = await axios.post(
-          `${BASE_URL}/api/bookings`,
-          bookingData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      }
-      
-      console.log('Response:', response.data);
-      
-      let successMessage = type === 'checkin' 
-        ? 'Guest checked in successfully!'
-        : 'Booking created successfully!';
-      
-      alert(successMessage);
-      navigate('/bookings');
+        
+        let successMessage = type === 'checkin' 
+          ? 'Guest checked in successfully!'
+          : 'Booking created successfully!';
+        
+        // Show a proper success message
+        alert(successMessage);
+        
+        // Only navigate on success
+        navigate('/bookings');
     } catch (error) {
-      console.error('Error details:', error);
-      if (error.message === 'No booking ID received from server') {
-        setError('Failed to create booking: No booking ID received');
-      } else if (type === 'checkin') {
-        setError(error.response?.data?.message || 'Failed to check in guest. Please try again.');
+      console.error('Error in booking submission:', error);
+      setLoading('');  // Reset loading state
+      
+      // Extract error details
+      const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred';
+      const errorDetails = error.response?.data?.error || error.stack || '';
+      
+      // Set both the main error message and details
+      setError(errorMessage);
+      setErrorDetails(errorDetails);
+      
+      if (error.response?.status === 400) {
+        // Bad request - validation errors
+        setError('Please check your booking details');
+      } else if (error.response?.status === 401) {
+        // Unauthorized
+        setError('Please login again to continue');
+        setTimeout(() => navigate('/login'), 2000); // Give user time to see the error
+      } else if (error.response?.status === 409) {
+        // Conflict - room already booked
+        setError('Selected room(s) are no longer available. Please try different rooms.');
       } else {
-        setError(error.response?.data?.message || 'Failed to create booking');
+        // Generic error message
+        setError(errorMessage || 'Failed to create booking. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -437,7 +465,9 @@ const BookingForm = () => {
         const newGuests = [...prev];
         // Add or remove guest objects as needed
         while (newGuests.length < numGuests - 1) {
-          newGuests.push({});
+          newGuests.push({
+            ...emptyGuest
+          });
         }
         return newGuests.slice(0, numGuests - 1);
       });
@@ -449,9 +479,19 @@ const BookingForm = () => {
 
   return (
     <div className="booking-form-container">
+      {error && (
+        <div className="error-container" style={{ padding: '1rem', marginBottom: '1rem', color: '#dc2626', backgroundColor: '#fee2e2', borderRadius: '0.375rem', border: '1px solid #fecaca' }}>
+          <div className="error-message" style={{ fontWeight: 'bold', marginBottom: errorDetails ? '0.5rem' : '0' }}>
+            {error}
+          </div>
+          {errorDetails && (
+            <div className="error-details" style={{ fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>
+              {errorDetails}
+            </div>
+          )}
+        </div>
+      )}
       <h2>New Booking</h2>
-      
-      {error && <div className="error-message">{error}</div>}
       
       <form onSubmit={handleSubmit} className="booking-form">
         {/* Room Selection Section */}
@@ -726,13 +766,62 @@ const BookingForm = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="idProof">ID Proof *</label>
+              <label htmlFor="idProofType">ID Proof Type *</label>
+              <select
+                id="idProofType"
+                name="idProofType"
+                value={formData.idProofType}
+                onChange={handleInputChange}
+                required
+              >
+                {idProofTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="idProof">ID Proof Number *</label>
               <input
                 type="text"
                 id="idProof"
                 name="idProof"
                 value={formData.idProof}
                 onChange={handleInputChange}
+                placeholder={`Enter ${idProofTypes.find(t => t.value === formData.idProofType)?.label} Number`}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="gstNumber">GST Number</label>
+              <input
+                type="text"
+                id="gstNumber"
+                name="gstNumber"
+                value={formData.gstNumber}
+                onChange={handleInputChange}
+                placeholder="e.g., 22AAAAA0000A1Z5"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="mealPlan">Meal Plan *</label>
+              <input
+                type="text"
+                id="mealPlan"
+                name="mealPlan"
+                value={formData.mealPlan}
+                onChange={(e) => {
+                  const uppercaseValue = e.target.value.toUpperCase();
+                  setFormData(prev => ({
+                    ...prev,
+                    mealPlan: uppercaseValue
+                  }));
+                }}
+                placeholder="Enter meal plan (e.g., EP, CP, MAP, AP)"
                 required
               />
             </div>
@@ -829,11 +918,27 @@ const BookingForm = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>ID Proof *</label>
+                    <label>ID Proof Type *</label>
+                    <select
+                      value={guest.id_proof_type || 'AADHAR'}
+                      onChange={(e) => handleGuestChange(index, 'id_proof_type', e.target.value)}
+                      required
+                    >
+                      {idProofTypes.map(type => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>ID Proof Number *</label>
                     <input
                       type="text"
                       value={guest.id_proof || ''}
                       onChange={(e) => handleGuestChange(index, 'id_proof', e.target.value)}
+                      placeholder={`Enter ${idProofTypes.find(t => t.value === (guest.id_proof_type || 'AADHAR'))?.label} Number`}
                       required
                     />
                   </div>
@@ -856,7 +961,7 @@ const BookingForm = () => {
                 onChange={(e) => {
                   setFormData(prev => ({
                     ...prev,
-                    paymentStatus: e.target.value
+                    paymentStatus: e.target.value.toUpperCase()
                   }));
                 }}
                 required
@@ -953,5 +1058,6 @@ const BookingForm = () => {
     </div>
   );
 };
+
 
 export default BookingForm;

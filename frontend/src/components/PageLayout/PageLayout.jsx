@@ -8,9 +8,9 @@ const PageLayout = ({ children }) => {
   return (
     <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar onCollapse={setIsSidebarCollapsed} />
-      <main className="page-container">
+      <div className="page-container">
         {children}
-      </main>
+      </div>
     </div>
   );
 };

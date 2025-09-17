@@ -9,7 +9,6 @@ import {
   RiSearchLine,
   RiFilterLine
 } from 'react-icons/ri';
-import ProfileDropdown from '../components/ProfileDropdown/ProfileDropdown';
 const BASE_URL = import.meta.env.VITE_API_URL; 
 
 const RoomManagement = () => {
@@ -53,7 +52,7 @@ const RoomManagement = () => {
         }
       });
 
-      console.log('Rooms data:', response.data);
+      // console.log('Rooms data:', response.data);
       setRooms(response.data);
       setFilteredRooms(response.data);
       setError(null);
@@ -190,7 +189,7 @@ const RoomManagement = () => {
     fetchRooms();
     
     const handleRoomStatusChange = () => {
-      console.log('Room status changed, refreshing...');
+      // console.log('Room status changed, refreshing...');
       fetchRooms();
     };
     
@@ -216,7 +215,7 @@ const RoomManagement = () => {
       <div className="header">
         <h1>Room Management</h1>
         <div className="profile-section">
-          <ProfileDropdown />
+
         </div>
       </div>
 
@@ -270,7 +269,7 @@ const RoomManagement = () => {
       {/* Room Grid */}
       <div className="room-grid">
         {filteredRooms.map((room) => (
-          <div key={room.room_id} className="room-card">
+          <div key={room.room_id} className={`room-card room-status-${room.status || 'Available'}`}>
             <div className="room-number">Room {room.room_number}</div>
             <div className="room-type">
               {room.room_type?.replace('DELUXE_', 'Deluxe ')
@@ -282,13 +281,12 @@ const RoomManagement = () => {
                             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                             .join(' ')}
             </div>
-            <div className="room-price">₹{room.price_per_night}/night</div>
             <div className="room-capacity">Capacity: {room.capacity || 1} persons</div>
-            <div className={`room-status status-${room.status?.toLowerCase()}`}>
-              {room.status === 'Available' ? '🟢 Available' : 
-               room.status === 'Booked' ? '🟡 Booked' : 
-               room.status === 'Occupied' ? '🔴 Occupied' : 
-               '❓ Unknown'}
+            <div className={`status-indicator status-${room.status || 'Available'}`}>
+              {room.status === 'Available' ? 'Available' : 
+               room.status === 'Booked' ? 'Booked' : 
+               room.status === 'Occupied' ? 'Occupied' : 
+               'Available'}
             </div>
             <div className="room-actions">
               {room.status?.toUpperCase() === 'OCCUPIED' || room.status?.toUpperCase() === 'BOOKED' ? (

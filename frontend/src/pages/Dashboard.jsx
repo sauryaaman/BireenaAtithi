@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import ProfilePicture from '../components/ProfileDropdown/ProfileDropdown';
+import HotelLogo from '../components/HotelLogo/HotelLogo';
 import { MdHotel, MdPeople, MdLogin, MdLogout, MdAdd } from 'react-icons/md';
 import { BsFillCircleFill } from 'react-icons/bs';
 import { RiHotelBedLine, RiDoorClosedLine, RiCalendarCheckLine } from 'react-icons/ri';
@@ -86,11 +86,11 @@ const StatCard = ({ title, value, icon: Icon, color, bgColor, actionIcon, onActi
       
       <div className="stats-section">
         <div className="dashboard-header">
-        <h1>Hotel Dashboard</h1>
-        <div className="profile-section">
-          <ProfilePicture />
+          <h1>Hotel Dashboard</h1>
+          <div className="profile-section">
+            <HotelLogo className="dashboard-logo" />
+          </div>
         </div>
-      </div>
         <div className="stats-grid">
           <StatCard
             title="Total Rooms"

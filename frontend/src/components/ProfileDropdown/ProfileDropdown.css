@@ -1,25 +1,61 @@
 .profile-dropdown-container {
-  position: relative;
+  position: relative !important;
+  margin-left: auto !important;
+  z-index: 1000 !important;
 }
 
-.profile-button {
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.3s;
+/* More specific selector to ensure styles are applied */
+div.profile-dropdown-container .profile-button,
+.dashboard-header .profile-button,
+.room-management .profile-button,
+.booking-management .profile-button,
+.customer-management .profile-button {
+  cursor: pointer !important;
+  width: 35px !important;
+  height: 35px !important;
+  min-width: 35px !important;
+  min-height: 35px !important;
+  max-width: 35px !important;
+  max-height: 35px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.3s ease !important;
+  border: 1px solid #e1e1e1 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  position: relative !important;
 }
 
 .profile-button:hover {
-  background: #e0e0e0;
+  border-color: #007bff;
+  transform: scale(1.05);
+}
+
+div.profile-dropdown-container .profile-button img,
+.dashboard-header .profile-button img,
+.room-management .profile-button img,
+.booking-management .profile-button img,
+.customer-management .profile-button img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  display: block !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
 }
 
 .profile-icon {
   font-size: 1.5rem;
-  color: #333;
+  color: #666;
 }
 
 .dropdown-menu {
@@ -27,11 +63,148 @@
   right: 0;
   top: 120%;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  min-width: 200px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  min-width: 250px;
   z-index: 1000;
   animation: slideDown 0.2s ease-out;
+  border: 1px solid #e1e1e1;
+  padding: 8px 0;
+}
+
+.dropdown-header {
+  padding: 16px;
+  border-bottom: 1px solid #e1e1e1;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-image-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #007bff;
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.profile-text {
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 60px); /* Prevent text overflow */
+  overflow: hidden;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hotel-name {
+  color: #666;
+  font-size: 0.875rem;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Additional fixes for header placement */
+.dashboard-header {
+  position: relative;
+}
+
+.dashboard-header .profile-dropdown-container {
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-header .profile-button {
+  position: relative;
+  margin: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: #333;
+  transition: background-color 0.2s;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.dashboard-header .profile-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #e1e1e1;
+  margin: 8px 0;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #333;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.dropdown-item:active {
+  background-color: #e9ecef;
+}
+
+.dropdown-icon {
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.logout-item {
+  color: #dc3545;
+}
+
+.logout-item .dropdown-icon {
+  color: #dc3545;
+}
+
+.logout-item:hover {
+  background-color: #dc354510;
 }
 
 @keyframes slideDown {
@@ -44,16 +217,8 @@
     transform: translateY(0);
   }
 }
+ 
 
-.dropdown-item {
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  color: #333;
-  transition: background-color 0.2s;
-}
 
 .dropdown-item:first-child {
   border-top-left-radius: 8px;

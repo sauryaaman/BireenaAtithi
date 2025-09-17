@@ -16,12 +16,12 @@ const getAllCustomers = async (req, res) => {
             .eq('user_id', user_id);
 
         if (roomsError) {
-            console.error('Error fetching rooms:', roomsError);
+            // console.error('Error fetching rooms:', roomsError);
             throw roomsError;
         }
 
         if (!userRooms || userRooms.length === 0) {
-            console.log('No rooms found for user');
+            // console.log('No rooms found for user');
             return res.json([]);
         }
 
@@ -29,7 +29,7 @@ const getAllCustomers = async (req, res) => {
         // console.log('Found room IDs:', roomIds);
 
         // Step 2: Get all bookings for these rooms
-        console.log('Step 2: Getting bookings for rooms');
+        // console.log('Step 2: Getting bookings for rooms');
         const { data: bookings, error: bookingsError } = await supabase
             .from('bookings')
             .select(`

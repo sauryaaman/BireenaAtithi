@@ -7,8 +7,16 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import BookingForm from './pages/BookingForm';
 import BookingManagement from './pages/BookingManagement';
 import CustomerManagement from './pages/CustomerManagement';
+import ViewBooking from './pages/ViewBooking';
+import EditBooking from './pages/EditBooking';
 import RoomManagement from './pages/RoomManagement';
-import InvoicePage from './pages/InvoicePage';
+import Invoice from './pages/Invoicenew';
+import ViewProfile from './components/ProfileDropdown/ViewProfile';
+import EditProfile from './components/ProfileDropdown/EditProfile';
+
+
+
+// In your Routes:
 
 // Protected route for hotel staff
 const ProtectedRoute = ({ children }) => {
@@ -49,6 +57,7 @@ function App() {
             </SuperAdminRoute>
           }
         />
+            
         
         {/* Protected routes with MainLayout */}
         <Route
@@ -59,6 +68,24 @@ function App() {
             </ProtectedRoute>
           }
         />
+        
+        <Route 
+          path="/view-profile" 
+          element={
+         <ProtectedRoute>
+         <ViewProfile />
+         </ProtectedRoute>}
+          />
+          <Route 
+          path="/edit-profile" 
+          element={
+         <ProtectedRoute>
+         <EditProfile />
+         </ProtectedRoute>}
+          />
+  {/* <Route path="/edit-profile" element={<EditProfile />} /> */}
+  {/* ... other routes ... */}
+
         
         <Route
           path="/dashboard"
@@ -79,6 +106,15 @@ function App() {
         />
 
         <Route
+          path="/edit-booking/:bookingId"
+          element={
+            <ProtectedRoute>
+              <EditBooking />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/bookings/new"
           element={
             <ProtectedRoute>
@@ -86,6 +122,23 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/booking/view/:bookingId"
+          element={
+            <ProtectedRoute>
+              <ViewBooking />
+            </ProtectedRoute>
+          }
+        />
+        {/* <Route
+          path="/booking/edit/:bookingId"
+          element={
+            <ProtectedRoute>
+              <EditBooking/>
+            </ProtectedRoute>
+          }
+        /> */}
 
         <Route
           path="/rooms"
@@ -127,7 +180,7 @@ function App() {
           path="/bookings/:bookingId/invoice"
           element={
             <ProtectedRoute>
-              <InvoicePage />
+              <Invoice />
             </ProtectedRoute>
           }
         />

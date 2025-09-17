@@ -6,6 +6,13 @@ async function verifyBookingAccess(req, res, next) {
         const { booking_id } = req.params;
         const user_id = req.user.user_id;
 
+        // console.log('verifyBookingAccess middleware:', {
+        //     booking_id,
+        //     user_id,
+        //     path: req.path,
+        //     method: req.method
+        // });
+
         // Get the rooms involved in this booking
         const { data: bookingRooms, error: bookingRoomsError } = await supabase
             .from('booking_rooms')
@@ -17,8 +24,13 @@ async function verifyBookingAccess(req, res, next) {
             `)
             .eq('booking_id', booking_id);
 
+        // console.log('Booking rooms query result:', {
+        //     rooms: bookingRooms ? bookingRooms.length : 0,
+        //     error: bookingRoomsError ? bookingRoomsError : 'none'
+        // });
+
         if (bookingRoomsError) {
-            console.error('Error fetching booking rooms:', bookingRoomsError);
+            // console.error('Error fetching booking rooms:', bookingRoomsError);
             return res.status(500).json({ error: 'Internal server error' });
         }
 

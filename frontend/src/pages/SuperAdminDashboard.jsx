@@ -21,7 +21,16 @@ const SuperAdminDashboard = () => {
     password: '',
     confirmPassword: '',
     hotelName: '',
-    phone: ''
+    phone: '',
+    // Hotel details fields
+    hotel_logo_url: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    country: '',
+    pin_code: '',
+    gst_number: ''
   });
 
   // Get token from localStorage
@@ -59,17 +68,35 @@ const SuperAdminDashboard = () => {
 
     try {
       setLoading(true);
+      
+      // Create FormData for multipart/form-data submission
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append('name', formData.username);
+      formDataToSubmit.append('email', formData.email);
+      formDataToSubmit.append('password', formData.password);
+      formDataToSubmit.append('hotel_name', formData.hotelName || 'Not specified');
+      formDataToSubmit.append('owner_phone', formData.phone || 'Not specified');
+      formDataToSubmit.append('address_line1', formData.address_line1 || '');
+      formDataToSubmit.append('address_line2', formData.address_line2 || '');
+      formDataToSubmit.append('city', formData.city || '');
+      formDataToSubmit.append('state', formData.state || '');
+      formDataToSubmit.append('country', formData.country || '');
+      formDataToSubmit.append('pin_code', formData.pin_code || '');
+      formDataToSubmit.append('gst_number', formData.gst_number || '');
+      
+      // Append logo file if exists
+      if (formData.hotel_logo_url) {
+        formDataToSubmit.append('logo', formData.hotel_logo_url);
+      }
+
       await axios.post(
         `${BASE_URL}/api/users/register`,
+        formDataToSubmit,
         {
-          name: formData.username,
-          email: formData.email,
-          password: formData.password,
-          hotel_name: formData.hotelName || 'Not specified',
-          owner_phone: formData.phone || 'Not specified'
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
         }
       );
       
@@ -80,7 +107,16 @@ const SuperAdminDashboard = () => {
         password: '',
         confirmPassword: '',
         hotelName: '',
-        phone: ''
+        phone: '',
+        // Reset hotel details
+        hotel_logo_url: '',
+        address_line1: '',
+        address_line2: '',
+        city: '',
+        state: '',
+        country: '',
+        pin_code: '',
+        gst_number: ''
       });
       setShowModal(false);
       fetchUsers();
@@ -200,75 +236,212 @@ const SuperAdminDashboard = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Hotel Name</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    username: e.target.value
-                  }))}
-                  required
-                />
+              <div className="form-section">
+                <h3>Basic Information</h3>
+                <div className="form-group">
+                  <label>Owner Name</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      username: e.target.value
+                    }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      email: e.target.value
+                    }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      password: e.target.value
+                    }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Confirm Password</label>
+                  <input
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      confirmPassword: e.target.value
+                    }))}
+                    required
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    email: e.target.value
-                  }))}
-                  required
-                />
+
+              <div className="form-section">
+                <h3>Hotel Information</h3>
+                <div className="form-group">
+                  <label>Hotel Name</label>
+                  <input
+                    type="text"
+                    value={formData.hotelName}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      hotelName: e.target.value
+                    }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      phone: e.target.value
+                    }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>GST Number</label>
+                  <input
+                    type="text"
+                    value={formData.gst_number}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      gst_number: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Hotel Logo</label>
+                  <div className="logo-upload-container">
+                    <input
+                      type="file"
+                      name="logo"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          // Create preview
+                          const previewUrl = URL.createObjectURL(file);
+                          
+                          setFormData(prev => ({
+                            ...prev,
+                            hotel_logo_url: file,
+                            hotel_logo_preview: previewUrl
+                          })
+                          );  
+                        }
+                      }}
+                    />
+                    {formData.hotel_logo_preview && (
+                      <div className="logo-preview">
+                        <img 
+                          src={formData.hotel_logo_preview} 
+                          alt="Hotel logo preview" 
+                          style={{ maxWidth: '100px', height: 'auto', marginTop: '10px' }}
+                        />
+                        <button 
+                          type="button"
+                          className="remove-logo-btn"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              hotel_logo: null,
+                              hotel_logo_preview: null
+                            }));
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    <small className="input-help">Upload logo image (max 5MB, formats: JPG, PNG, GIF)</small>
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    password: e.target.value
-                  }))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Confirm Password</label>
-                <input
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    confirmPassword: e.target.value
-                  }))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Hotel Name</label>
-                <input
-                  type="text"
-                  value={formData.hotelName}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    hotelName: e.target.value
-                  }))}
-                />
-              </div>
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    phone: e.target.value
-                  }))}
-                />
+
+              <div className="form-section">
+                <h3>Hotel Address</h3>
+                <div className="form-group">
+                  <label>Address Line 1</label>
+                  <input
+                    type="text"
+                    value={formData.address_line1}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      address_line1: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Address Line 2</label>
+                  <input
+                    type="text"
+                    value={formData.address_line2}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      address_line2: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      city: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      state: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Country</label>
+                  <input
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      country: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>PIN Code</label>
+                  <input
+                    type="text"
+                    value={formData.pin_code}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      pin_code: e.target.value
+                    }))}
+                  />
+                </div>
               </div>
               <div className="modal-actions">
                 <button 

@@ -1,171 +1,153 @@
-import { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import {
-  RiUserLine,
-  RiSettingsLine,
-  RiLogoutBoxLine,
-  RiLockPasswordLine,
-} from 'react-icons/ri';
+import { FaUser, FaEdit, FaKey, FaSignOutAlt, FaCamera } from 'react-icons/fa';
 import './ProfileDropdown.css';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 const ProfileDropdown = () => {
-  const navigate = useNavigate();
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [error, setError] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const [hotelDetails, setHotelDetails] = useState(null);
+    const [userDetails, setUserDetails] = useState(null);
+    const [error, setError] = useState(null);
+    const dropdownRef = useRef(null);
+    const navigate = useNavigate();
 
-  const handleViewProfile = () => {
-    navigate('/profile');
-    setShowDropdown(false);
-  };
+    // Fetch user and hotel details
+    useEffect(() => {
+        const fetchDetails = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    navigate('/login');
+                    return;
+                }
 
-  const handleEditProfile = () => {
-    navigate('/profile/edit');
-    setShowDropdown(false);
-  };
+                const config = {
+                    headers: { Authorization: `Bearer ${token}` }
+                };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
+                // Fetch user profile and hotel details in parallel
+                const [userResponse, hotelResponse] = await Promise.all([
+                    axios.get(`${BASE_URL}/api/users/profile`, config),
+                    axios.get(`${BASE_URL}/api/users/hotel-details`, config)
+                ]);
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    try {
-      if (passwordData.newPassword !== passwordData.confirmPassword) {
-        setError('New passwords do not match');
-        return;
-      }
+                setUserDetails(userResponse.data);
+                setHotelDetails(hotelResponse.data);
+                setError(null);
+            } catch (error) {
+                console.error('Error fetching details:', error);
+                setError('Failed to load profile');
+                if (error.response?.status === 401) {
+                    localStorage.removeItem('token');
+                    navigate('/login');
+                }
+            }
+        };
 
-      const token = localStorage.getItem('token');
-      await axios.put(
-        `${BASE_URL}/api/users/change-password`,
-        {
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+        fetchDetails();
+    }, [navigate]);
 
-      setShowChangePasswordModal(false);
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-      setError('');
-      alert('Password changed successfully!');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to change password');
-    }
-  };
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
 
-  return (
-    <div className="profile-dropdown-container">
-      <div 
-        className="profile-button" 
-        onClick={() => setShowDropdown(!showDropdown)}
-      >
-        <RiUserLine className="profile-icon" />
-      </div>
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-      {showDropdown && (
-        <div className="dropdown-menu">
-          <div className="dropdown-item" onClick={handleViewProfile}>
-            <RiUserLine /> View Profile
-          </div>
-          <div className="dropdown-item" onClick={handleEditProfile}>
-            <RiSettingsLine /> Edit Profile
-          </div>
-          <div 
-            className="dropdown-item" 
-            onClick={() => {
-              setShowChangePasswordModal(true);
-              setShowDropdown(false);
-            }}
-          >
-            <RiLockPasswordLine /> Change Password
-          </div>
-          <div className="dropdown-item" onClick={handleLogout}>
-            <RiLogoutBoxLine /> Logout
-          </div>
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        navigate('/login');
+    };
+
+    const handleViewProfile = () => {
+        navigate('/view-profile', { 
+            state: { userDetails, hotelDetails } 
+        });
+        setIsOpen(false);
+    };
+
+    const handleEditProfile = () => {
+        navigate('/edit-profile', { 
+            state: { userDetails, hotelDetails } 
+        });
+        setIsOpen(false);
+    };
+
+    return (
+        <div className="profile-dropdown" ref={dropdownRef}>
+            <div className="profile-icon" onClick={() => setIsOpen(!isOpen)}>
+                {hotelDetails?.hotel_logo_url ? (
+                    <img 
+                        src={hotelDetails.hotel_logo_url} 
+                        alt="Hotel Logo" 
+                        className="hotel-logo"
+                    />
+                ) : (
+                    <div className="default-logo">
+                        {userDetails?.hotel_name?.charAt(0) || 'H'}
+                    </div>
+                )}
+            </div>
+
+            {isOpen && (
+                <div className="dropdown-menu">
+                    <div className="dropdown-header">
+                        <div className="profile-info">
+                            <div className="profile-image-container">
+                                {hotelDetails?.hotel_logo_url ? (
+                                    <img 
+                                        src={hotelDetails.hotel_logo_url} 
+                                        alt="Hotel Logo"
+                                        className="profile-image"
+                                    />
+                                ) : (
+                                    <div className="profile-image-placeholder">
+                                        <FaCamera />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="profile-text">
+                                <span className="user-name">{userDetails?.name}</span>
+                                <span className="hotel-name">{userDetails?.hotel_name}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="dropdown-divider"></div>
+                    <button onClick={() => { navigate('/profile'); setIsOpen(false); }} className="dropdown-item">
+                        <FaUser className="dropdown-icon" />
+                        <span>View Profile</span>
+                    </button>
+                    <button onClick={() => { navigate('/edit-profile'); setIsOpen(false); }} className="dropdown-item">
+                        <FaEdit className="dropdown-icon" />
+                        <span>Edit Profile</span>
+                    </button>
+                    <button onClick={() => { navigate('/change-password'); setIsOpen(false); }} className="dropdown-item">
+                        <FaKey className="dropdown-icon" />
+                        <span>Change Password</span>
+                    </button>
+                    <div className="dropdown-divider"></div>
+                    <button 
+                        onClick={() => {
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('userInfo');
+                            navigate('/login');
+                        }} 
+                        className="dropdown-item logout-item"
+                    >
+                        <FaSignOutAlt className="dropdown-icon" />
+                        <span>Logout</span>
+                    </button>
+                </div>
+            )}
         </div>
-      )}
-
-      {/* Change Password Modal */}
-      {showChangePasswordModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <h2>Change Password</h2>
-            {error && <div className="error-message">{error}</div>}
-            <form onSubmit={handleChangePassword}>
-              <div className="form-group">
-                <label>Current Password</label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, newPassword: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Confirm New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowChangePasswordModal(false);
-                    setPasswordData({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: '',
-                    });
-                    setError('');
-                  }}
-                >
-                  Cancel
-                </button>
-                <button type="submit">Change Password</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default ProfileDropdown;

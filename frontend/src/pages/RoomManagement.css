@@ -40,6 +40,43 @@
   z-index: 1000;
 }
 
+.room-status-Available {
+  background-color: #e8f5e9 !important; /* Light green */
+  border-left: 4px solid #4caf50 !important;
+}
+
+.room-status-Booked {
+  background-color: #fff8e1 !important; /* Light yellow */
+  border-left: 4px solid #ffc107 !important;
+}
+
+.room-status-Occupied {
+  background-color: #ffebee !important; /* Light red */
+  border-left: 4px solid #f44336 !important;
+}
+
+.status-indicator {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.status-Available {
+  background-color: #4caf50;
+  color: white;
+}
+
+.status-Booked {
+  background-color: #ffc107;
+  color: black;
+}
+
+.status-Occupied {
+  background-color: #f44336;
+  color: white;
+}
+
 .room-actions {
   display: flex;
   gap: 10px;

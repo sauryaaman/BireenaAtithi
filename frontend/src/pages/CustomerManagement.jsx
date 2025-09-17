@@ -16,7 +16,7 @@ import {
   RiSave3Line,
   RiArrowLeftLine
 } from 'react-icons/ri';
-import ProfileDropdown from '../components/ProfileDropdown/ProfileDropdown';
+
 import './CustomerManagement.css';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -104,12 +104,12 @@ const CustomerManagement = () => {
         : 'Failed to fetch customers. Please try again.';
       
       setError(errorMessage);
-      console.log('Full error details:', {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        message: err.message
-      });
+      // console.log('Full error details:', {
+      //   status: err.response?.status,
+      //   statusText: err.response?.statusText,
+      //   data: err.response?.data,
+      //   message: err.message
+      // });
       setCustomers([]);
     } finally {
       setLoading(false);
@@ -256,7 +256,7 @@ const CustomerManagement = () => {
       {/* Header Section */}
       <div className="header">
         <h1>Customer Management</h1>
-        <ProfileDropdown />
+
       </div>
 
       {/* Actions Section */}

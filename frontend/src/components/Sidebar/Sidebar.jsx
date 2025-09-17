@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import {
   RiDashboardLine,
   RiCalendarCheckLine,
@@ -12,9 +13,30 @@ import {
 } from 'react-icons/ri';
 import './Sidebar.css';
 
+const BASE_URL = import.meta.env.VITE_API_URL;
+
 const Sidebar = ({ onCollapse }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [hotelName, setHotelName] = useState('');
   const location = useLocation();
+
+  useEffect(() => {
+    const fetchHotelDetails = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${BASE_URL}/api/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data.hotel_name) {
+          setHotelName(response.data.hotel_name);
+        }
+      } catch (error) {
+        console.error('Error fetching hotel details:', error);
+      }
+    };
+
+    fetchHotelDetails();
+  }, []);
 
   const menuItems = [
     { path: '/dashboard', icon: RiDashboardLine, text: 'Dashboard' },
@@ -39,7 +61,7 @@ const Sidebar = ({ onCollapse }) => {
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <h2 className="logo">
-          {isCollapsed ? 'HA' : 'Hotel Advin'}
+          {isCollapsed ? hotelName.split(' ').map(word => word[0]).join('').slice(0, 2) : hotelName}
         </h2>
         <button 
           className="collapse-btn"

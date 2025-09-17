@@ -11,7 +11,7 @@ import {
   RiCloseLine,
   RiDownloadLine
 } from 'react-icons/ri';
-import ProfileDropdown from '../components/ProfileDropdown/ProfileDropdown';
+
 import './BookingManagement.css';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -137,6 +137,8 @@ const BookingManagement = () => {
   const handlePayment = async (bookingId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
+      // Convert payment status to uppercase
+      const uppercaseStatus = newStatus.toUpperCase();
       await axios.put(
         `${BASE_URL}/api/bookings/${bookingId}/payment`,
         { payment_status: newStatus },
@@ -210,9 +212,146 @@ const BookingManagement = () => {
     }
   };
 
-  const handleDownloadBill = (bookingId) => {
-    // Navigate to invoice page which has download functionality
-    navigate(`/bookings/${bookingId}/invoice`);
+  const handleDeleteBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${BASE_URL}/api/bookings/${bookingId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Refresh bookings list
+      await fetchBookings();
+      
+      // Broadcast event to refresh room status
+      window.dispatchEvent(new CustomEvent('roomStatusChanged'));
+      
+      alert('Booking deleted successfully');
+    } catch (err) {
+      console.error('Delete booking error:', err);
+      alert(err.response?.data?.message || 'Failed to delete booking');
+    }
+  };
+
+  const handleViewInvoice = async (bookingId) => {
+    try {
+      // console.log('Starting invoice download for booking:', bookingId);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      // console.log('Making request to:', `${BASE_URL}/api/bookings/${bookingId}/invoice/download`);
+      
+      // First check if the invoice is available
+      const checkResponse = await axios({
+        url: `${BASE_URL}/api/bookings/${bookingId}/invoice/details`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // console.log('Invoice details check response:', checkResponse.data);
+
+      // If we get here, invoice is available, now get the PDF
+      const response = await axios({
+        url: `${BASE_URL}/api/bookings/${bookingId}/invoice/download`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/pdf'
+        },
+        responseType: 'blob'
+      });
+
+      // console.log('PDF response received, type:', response.headers['content-type']);
+      
+      // Verify we got PDF data
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Received empty PDF data');
+      }
+
+      // Create blob with explicit PDF type
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      // console.log('Created blob, size:', blob.size);
+
+      // Create and open in new window instead of using link
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Open in new window where we can handle load errors
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(
+          '<html><head><title>Invoice Preview</title></head><body style="margin:0;padding:0;">' +
+          '<embed width="100%" height="100%" src="' + blobUrl + '" type="application/pdf">' +
+          '</body></html>'
+        );
+      } else {
+        // If popup was blocked, try iframe in current window
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.position = 'fixed';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.zIndex = '9999';
+        iframe.src = blobUrl;
+        
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.top = '0';
+        container.style.left = '0';
+        container.style.background = 'rgba(0,0,0,0.8)';
+        container.style.zIndex = '9998';
+        
+        const closeButton = document.createElement('button');
+        closeButton.innerText = 'Close';
+        closeButton.style.position = 'fixed';
+        closeButton.style.top = '20px';
+        closeButton.style.right = '20px';
+        closeButton.style.zIndex = '10000';
+        closeButton.onclick = () => {
+          document.body.removeChild(container);
+          document.body.removeChild(closeButton);
+          window.URL.revokeObjectURL(blobUrl);
+        };
+        
+        document.body.appendChild(container);
+        document.body.appendChild(closeButton);
+        container.appendChild(iframe);
+      }
+
+    } catch (err) {
+      console.error('Detailed error:', err);
+      let errorMessage = 'Failed to fetch invoice.';
+      
+      if (err.response) {
+        console.log('Error response:', {
+          status: err.response.status,
+          data: err.response.data,
+          headers: err.response.headers
+        });
+        
+        if (err.response.status === 401) {
+          errorMessage = 'Session expired. Please login again.';
+          navigate('/login');
+        } else if (err.response.status === 400) {
+          errorMessage = err.response.data?.error || 'Cannot generate invoice. Make sure payment is completed.';
+        } else if (err.response.status === 404) {
+          errorMessage = 'Invoice not found. Please make sure the booking exists.';
+        } else if (err.response.status === 500) {
+          errorMessage = 'Server error while generating invoice. Please try again.';
+        }
+      }
+      
+      alert(errorMessage);
+    }
   };
 
   return (
@@ -220,7 +359,7 @@ const BookingManagement = () => {
       {/* Header Section */}
       <div className="header">
         <h1>Booking Management</h1>
-        <ProfileDropdown />
+
       </div>
       <div>
     
@@ -320,6 +459,7 @@ const BookingManagement = () => {
                 <th>Amount</th>
                 <th>Bill</th>
                 <th>Actions</th>
+                <th>Edit/Delete</th>
               </tr>
             </thead>
             <tbody>
@@ -360,11 +500,11 @@ const BookingManagement = () => {
                           <select
                             value={booking.payment_status}
                             onChange={(e) => handlePayment(booking.booking_id, e.target.value)}
-                            className={`payment-status-select payment-${booking.payment_status.toLowerCase()}`}
+                            className={`payment-status-select payment-${booking.payment_status?.toLowerCase()}`}
                           >
-                            <option value="Unpaid">Unpaid</option>
-                            <option value="Partial">Partial</option>
-                            <option value="Paid">Paid</option>
+                            <option value="UNPAID">Unpaid</option>
+                            <option value="PARTIAL">Partial</option>
+                            <option value="PAID">Paid</option>
                           </select>
                         </div>
                       ) : (
@@ -377,16 +517,24 @@ const BookingManagement = () => {
                   <td>₹{booking.total_amount}</td>
                   <td>
                     <button 
-                      onClick={() => handleDownloadBill(booking.booking_id)}
-                      disabled={booking.payment_status !== 'Paid'}
-                      className={`view-invoice-btn ${booking.payment_status !== 'Paid' ? 'disabled' : ''}`}
-                      title={booking.payment_status !== 'Paid' ? 'Complete payment to view invoice' : 'View/Download Invoice'}
+                      onClick={() => handleViewInvoice(booking.booking_id)}
+                      disabled={booking.payment_status?.toUpperCase() !== 'PAID'}
+                      className={`view-invoice-btn ${booking.payment_status?.toUpperCase() !== 'PAID' ? 'disabled' : ''}`}
+                      title={booking.payment_status?.toUpperCase() !== 'PAID' ? 'Complete payment to view invoice' : 'View/Download Invoice'}
                     >
                       <RiEyeLine />
                       <span className="icon-text">Invoice</span>
                     </button>
                   </td>
                   <td className="actions-cell">
+                    <button
+                      onClick={() => navigate(`/edit-booking/${booking.booking_id}`)}
+                      className="edit-btn"
+                      title="Edit Booking"
+                    >
+                      <RiEdit2Line />
+                      <span className="icon-text">Edit</span>
+                    </button>
                     {/* Check-in button for upcoming bookings */}
                     {booking.status?.toLowerCase() === 'upcoming' && (
                       <button 
@@ -397,7 +545,7 @@ const BookingManagement = () => {
                         Check In
                       </button>
                     )}
-                    {booking.status?.toLowerCase() === 'checked-in' && booking.payment_status === 'Paid' && (
+                    {booking.status?.toLowerCase() === 'checked-in' && booking.payment_status?.toUpperCase() === 'PAID' && (
                       <button 
                         onClick={() => handleCheckout(booking.booking_id)}
                         className="checkout-btn"
@@ -409,6 +557,24 @@ const BookingManagement = () => {
                     {booking.status?.toLowerCase() === 'checked-out' && (
                       <span className="checkout-complete">Completed</span>
                     )}
+                  </td>
+                  <td className="edit-delete-cell">
+                    <button
+                      onClick={() => navigate(`/booking/view/${booking.booking_id}`)}
+                      className="edit-btn"
+                      title="Edit Booking"
+                    >
+                      <RiEdit2Line />
+                      <span className="icon-text">View</span>
+                    </button>
+                    {/* <button
+                      onClick={() => handleDeleteBooking(booking.booking_id)}
+                      className="delete-btn"
+                      title="Delete Booking"
+                    >
+                      <RiCloseLine />
+                      <span className="icon-text">Delete</span>
+                    </button> */}
                   </td>
                 </tr>
               ))}
@@ -517,7 +683,7 @@ const BookingManagement = () => {
             </div>
 
             <div className="modal-footer">
-              <button onClick={() => navigate(`/booking/invoice/${selectedBooking.booking_id}`)}>
+              <button onClick={() => navigate(`/bookings/${selectedBooking.booking_id}/invoice`)}>
                 View Invoice
               </button>
               <button onClick={() => handleEditBooking(selectedBooking.booking_id)}>

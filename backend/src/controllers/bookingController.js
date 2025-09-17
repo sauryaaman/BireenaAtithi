@@ -1,16 +1,36 @@
 const supabase = require('../config/db');
 
-// Constants for status management
+// Test helper function to get a valid booking for invoice testing
+async function getTestBookingId(user_id) {
+    try {
+        const { data: booking, error } = await supabase
+            .from('bookings')
+            .select('booking_id')
+            .eq('user_id', user_id)
+            .eq('payment_status', 'PAID')
+            .limit(1)
+            .single();
+            
+        if (error) throw error;
+        return booking?.booking_id;
+    } catch (error) {
+        // console.error('Error getting test booking:', error);
+        return null;
+    }
+}
+
+// Constants for booking management
 const BOOKING_STATUS = {
     UPCOMING: 'Upcoming',
     CHECKED_IN: 'Checked-in',
-    CHECKED_OUT: 'Checked-out'
+    CHECKED_OUT: 'Checked-out',
+    BOOKED: 'Booked'  // Added this status
 };
 
 const PAYMENT_STATUS = {
-    PAID: 'Paid',
-    PARTIAL: 'Partial',
-    UNPAID: 'Unpaid'
+    PAID: 'PAID',
+    PARTIAL: 'PARTIAL',
+    UNPAID: 'UNPAID'
 };
 
 const ROOM_STATUS = {
@@ -54,7 +74,8 @@ async function validateRoomAvailability(roomIds, checkin_date, checkout_date) {
 // Create a new booking
 async function createBooking(req, res) {
     try {
-        // console.log('Received booking request:', req.body);
+        // console.log('========= CREATE BOOKING START =========');
+        // console.log('Request body:', req.body);
         
         const {
             primary_guest,
@@ -79,20 +100,22 @@ async function createBooking(req, res) {
             const checkinDateOnly = new Date(checkin_date);
             checkinDateOnly.setHours(0, 0, 0, 0);
 
+            // Determine if it's an immediate check-in day
+            const isCheckInDay = checkinDateOnly.getTime() === currentDate.getTime();
+            
             // Determine initial statuses
-            const initialBookingStatus = (is_immediate_checkin && checkinDateOnly.getTime() === currentDate.getTime())
+            const initialBookingStatus = (is_immediate_checkin && isCheckInDay)
                 ? BOOKING_STATUS.CHECKED_IN
                 : BOOKING_STATUS.UPCOMING;
 
-            const initialRoomStatus = (is_immediate_checkin && checkinDateOnly.getTime() === currentDate.getTime())
+            const initialRoomStatus = (is_immediate_checkin && isCheckInDay)
                 ? ROOM_STATUS.OCCUPIED
                 : ROOM_STATUS.BOOKED;
 
             // Validate room availability
-            try {
-                await validateRoomAvailability(roomIds, checkin_date, checkout_date);
-            } catch (error) {
-                return res.status(400).json({ message: error.message });
+            const validationResult = await validateRoomAvailability(roomIds, checkin_date, checkout_date);
+            if (!validationResult) {
+                return res.status(400).json({ message: 'Room validation failed' });
             }
 
             // console.log('Received booking data:', { primary_guest, selected_rooms, checkin_date, checkout_date });
@@ -102,83 +125,151 @@ async function createBooking(req, res) {
             const checkoutDate = new Date(checkout_date);
             const nights = Math.ceil((checkoutDate - checkinDate) / (1000 * 60 * 60 * 24));
 
+            // Initialize booking variable at the widest scope
+            let createdBooking = null;
+
             // Create new customer first (primary guest)
-            const { data: newCustomer, error: customerError } = await supabase
-                .from('customers')
-                .insert([{
-                    name: primary_guest.name,
-                    phone: primary_guest.phone,
-                    email: primary_guest.email
-                }])
-                .select()
-                .single();
+            try {
+                // Validate required customer fields
+                if (!primary_guest.name || !primary_guest.phone) {
+                    throw new Error('Name and phone are required for primary guest');
+                }
 
-            if (customerError) {
-                // console.error('Error creating customer:', customerError);
-                throw new Error('Failed to create customer');
-            }
+                const { data: newCustomer, error: customerError } = await supabase
+                    .from('customers')
+                    .insert([{
+                        name: primary_guest.name,
+                        phone: primary_guest.phone,
+                        email: primary_guest.email,
+                        gst_number: primary_guest.gst_number,
+                        meal_plan: primary_guest.meal_plan,
+                        id_proof: primary_guest.id_proof_type,
+                        id_proof_number: primary_guest.id_proof,
+                        address_line1: primary_guest.address_line1,
+                        address_line2: primary_guest.address_line2,
+                        city: primary_guest.city,
+                        state: primary_guest.state,
+                        country: primary_guest.country,
+                        pin: primary_guest.pin
+                    }])
+                    .select()
+                    .single();
 
-            const customerId = newCustomer.cust_id;
-            // console.log('Created new customer with ID:', customerId);
+                if (customerError) {
+                    // console.error('Error creating customer:', customerError);
+                    throw new Error(`Failed to create customer: ${customerError.message}`);
+                }
 
-            // Create main booking record
-            const { data: booking, error: bookingError } = await supabase
-                .from('bookings')
-                .insert([{
+                if (!newCustomer) {
+                    throw new Error('Customer creation failed - no data returned');
+                }
+
+                // console.log('Customer created successfully:', newCustomer);
+                const customerId = newCustomer.cust_id;
+                // console.log('Created new customer with ID:', customerId);
+
+                // Create main booking record
+                const bookingData = {
                     cust_id: customerId,
                     room_id: selected_rooms[0].room_id, // Primary room for backward compatibility
                     checkin_date,
                     checkout_date,
                     nights,
                     total_amount,
-                    payment_status: payment_status || 'Unpaid',
-                    status: is_immediate_checkin ? 'Checked-in' : 'Upcoming'
-                }])
-                .select()
-                .single();
+                    payment_status: payment_status?.toUpperCase() || PAYMENT_STATUS.UNPAID,
+                    status: initialBookingStatus,
+                    checkin_time: initialBookingStatus === BOOKING_STATUS.CHECKED_IN ? new Date().toISOString() : null
+                };
 
-            if (bookingError) {
-                // console.error('Error creating booking:', bookingError);
-                throw bookingError;
-            }
+                // console.log('Creating booking with data:', bookingData);
 
-            // Store all selected rooms in booking_rooms
-            const bookingRooms = selected_rooms.map(room => ({
-                booking_id: booking.booking_id,
-                room_id: room.room_id,
-                price_per_night: room.price_per_night
-            }));
+                try {
+                    const { data: booking, error } = await supabase
+                        .from('bookings')
+                        .insert([bookingData])
+                        .select()
+                        .single();
 
-            const { error: bookingRoomsError } = await supabase
-                .from('booking_rooms')
-                .insert(bookingRooms);
+                    if (error) {
+                        // console.error('Error creating booking:', error);
+                        throw new Error(`Failed to create booking: ${error.message}`);
+                    }
 
-            if (bookingRoomsError) {
-                // console.error('Error adding booking rooms:', bookingRoomsError);
-                throw bookingRoomsError;
-            }
+                    if (!booking) {
+                        throw new Error('Booking creation failed - no data returned');
+                    }
 
-            // Update status for all selected rooms
-            const roomStatus = is_immediate_checkin ? 'Occupied' : 'Booked';
-            const { error: roomStatusError } = await supabase
-                .from('rooms')
-                .update({ status: roomStatus })
-                .in('room_id', selected_rooms.map(r => r.room_id));
+                    // console.log('Booking created successfully:', booking);
+                    createdBooking = booking; // Save to outer scope variable
+                } catch (error) {
+                    // console.error('Error in booking creation:', error);
+                    throw new Error(`Failed to create booking: ${error.message}`);
+                }
 
-            if (roomStatusError) {
-                // console.error('Error updating room status:', roomStatusError);
-                throw roomStatusError;
+                // Store all selected rooms in booking_rooms and update their status
+                // Prepare booking rooms data using createdBooking
+                const bookingRooms = selected_rooms.map(room => ({
+                    booking_id: createdBooking.booking_id,
+                    room_id: room.room_id,
+                    price_per_night: room.price_per_night
+                }));
+
+                // console.log('Creating booking rooms entries:', bookingRooms);
+
+                const { data: createdBookingRooms, error: bookingRoomsError } = await supabase
+                    .from('booking_rooms')
+                    .insert(bookingRooms)
+                    .select();
+
+                if (bookingRoomsError) {
+                    // console.error('Error adding booking rooms:', bookingRoomsError);
+                    throw new Error(`Failed to create booking rooms: ${bookingRoomsError.message}`);
+                }
+
+                if (!createdBookingRooms || createdBookingRooms.length === 0) {
+                    throw new Error('No booking rooms were created');
+                }
+
+                // console.log('Booking rooms created successfully:', createdBookingRooms);
+
+                // Update status for all selected rooms
+                const roomsToUpdate = selected_rooms.map(r => r.room_id);
+                
+                // console.log(`Updating room statuses to ${initialRoomStatus} for rooms:`, roomsToUpdate);
+
+                const { data: updatedRooms, error: roomStatusError } = await supabase
+                    .from('rooms')
+                    .update({ status: initialRoomStatus })
+                    .in('room_id', roomsToUpdate)
+                    .select();
+
+                if (roomStatusError) {
+                    // console.error('Error updating room status:', roomStatusError);
+                    throw new Error(`Failed to update room status: ${roomStatusError.message}`);
+                }
+
+                if (!updatedRooms || updatedRooms.length === 0) {
+                    throw new Error('No rooms were updated with new status');
+                }
+
+                // console.log('Room statuses updated successfully:', updatedRooms);
+            } catch (error) {
+                // console.error('Error in booking rooms handling:', error);
+                throw error;
             }
 
             // Store primary guest in booking_guests
             const { error: primaryGuestError } = await supabase
                 .from('booking_guests')
                 .insert([{
-                    booking_id: booking.booking_id,
+                    booking_id: createdBooking.booking_id,
                     name: primary_guest.name,
                     phone: primary_guest.phone,
                     email: primary_guest.email,
-                    id_proof: primary_guest.id_proof,
+                    id_proof: primary_guest.id_proof_type,
+                    id_proof_number: primary_guest.id_proof,
+                    gst_number: primary_guest.gst_number,
+                    meal_plan: primary_guest.meal_plan,
                     is_primary: true
                 }]);
 
@@ -190,11 +281,12 @@ async function createBooking(req, res) {
             // Store additional guests if any
             if (additional_guests && additional_guests.length > 0) {
                 const additionalGuestRecords = additional_guests.map(guest => ({
-                    booking_id: booking.booking_id,
+                    booking_id: createdBooking.booking_id,
                     name: guest.name,
                     phone: guest.phone,
                     email: guest.email,
-                    id_proof: guest.id_proof,
+                    id_proof: guest.id_proof_type,
+                    id_proof_number: guest.id_proof,
                     is_primary: false
                 }));
 
@@ -208,26 +300,28 @@ async function createBooking(req, res) {
                 }
             }
 
-            if (bookingError) {
-                // console.error('Error creating booking:', bookingError);
-                throw bookingError;
-            }
-
+            // Send successful response
             res.status(201).json({
                 message: 'Booking created successfully',
-                booking_id: booking.booking_id,
+                booking_id: createdBooking.booking_id,
                 status: initialBookingStatus
             });
 
         } catch (error) {
             // console.error('Error in createBooking:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            const errorMessage = error.message || 'Internal server error';
+            const statusCode = error.statusCode || 500;
+            res.status(statusCode).json({ 
+                error: errorMessage,
+                success: false
+            });
         }
 }
 
 async function checkinBooking(req, res) {
     try {
         const { booking_id } = req.params;
+        // console.log('Checking in booking:', booking_id);
         
         // Get booking details
         const { data: booking, error: fetchError } = await supabase
@@ -235,10 +329,16 @@ async function checkinBooking(req, res) {
             .select('*, rooms:room_id(*)')
             .eq('booking_id', booking_id)
             .single();
+            
+        // console.log('Booking details:', booking, 'Fetch error:', fetchError);
 
         if (fetchError) {
             // console.error('Error fetching booking:', fetchError);
-            return res.status(500).json({ error: 'Error fetching booking details' });
+            return res.status(500).json({ 
+                error: 'Error fetching booking details',
+                details: fetchError.message,
+                code: fetchError.code
+            });
         }
 
         if (!booking) {
@@ -320,7 +420,7 @@ async function checkoutBooking(req, res) {
             .single();
 
         if (fetchError) {
-            console.error('Error fetching booking:', fetchError);
+            // console.error('Error fetching booking:', fetchError);
             return res.status(500).json({ error: 'Error fetching booking details' });
         }
 
@@ -517,13 +617,16 @@ async function updatePaymentStatus(req, res) {
         const { booking_id } = req.params;
         const { payment_status } = req.body;
 
-        if (!Object.values(PAYMENT_STATUS).includes(payment_status)) {
+        // Convert payment status to uppercase to match PAYMENT_STATUS enum
+        const normalizedPaymentStatus = payment_status.toUpperCase();
+
+        if (!Object.values(PAYMENT_STATUS).includes(normalizedPaymentStatus)) {
             return res.status(400).json({ message: 'Invalid payment status' });
         }
 
         const { error } = await supabase
             .from('bookings')
-            .update({ payment_status })
+            .update({ payment_status: normalizedPaymentStatus })
             .eq('booking_id', booking_id);
 
         if (error) throw error;
@@ -594,12 +697,119 @@ async function getBookingForBill(req, res) {
 async function downloadInvoice(req, res) {
     try {
         const { booking_id } = req.params;
+        const user_id = req.user.user_id;
 
-        const { data: booking, error } = await supabase
+        // Get invoice details using the existing function
+        const invoiceDetailsResponse = {};
+        await getInvoiceDetails({ params: { booking_id }, user: { user_id } }, {
+            json: (data) => {
+                Object.assign(invoiceDetailsResponse, data);
+            },
+            status: (code) => ({
+                json: (data) => {
+                    invoiceDetailsResponse.statusCode = code;
+                    Object.assign(invoiceDetailsResponse, data);
+                }
+            })
+        });
+
+        // Check if there was an error in getting invoice details
+        if (invoiceDetailsResponse.statusCode >= 400) {
+            return res.status(invoiceDetailsResponse.statusCode).json({ error: invoiceDetailsResponse.error });
+        }
+
+        const { generateInvoicePDF } = require('../utils/invoiceGenerator');
+
+        // Generate PDF using the invoice details
+        const pdfBuffer = await generateInvoicePDF(invoiceDetailsResponse);
+
+        // Check if PDF buffer is valid
+        if (!pdfBuffer || pdfBuffer.length === 0) {
+            console.error('Generated PDF buffer is empty or invalid');
+            return res.status(500).json({ error: 'Failed to generate PDF. Please try again.' });
+        }
+
+        // console.log(`Generated PDF buffer size: ${pdfBuffer.length} bytes`);
+
+        // Temporarily save PDF to file for debugging
+        // const fs = require('fs');
+        // const path = require('path');
+        // const debugFilePath = path.join(__dirname, `../../debug-invoice-${booking_id}.pdf`);
+        // try {
+        //     fs.writeFileSync(debugFilePath, pdfBuffer);
+        //     console.log(`Debug PDF saved to: ${debugFilePath}`);
+        // } catch (fileError) {
+        //     console.error('Error saving debug PDF file:', fileError);
+        // }
+
+        // Set response headers for PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice-${booking_id}.pdf`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send the PDF as binary data
+        res.write(pdfBuffer, 'binary');
+        res.end(null, 'binary');
+    } catch (error) {
+        // console.error('Error generating invoice:', error);
+        let errorMessage = 'Failed to generate invoice';
+        let statusCode = 500;
+
+        if (error.message.includes('PDF generation failed')) {
+            errorMessage = 'Failed to generate PDF. Please try again.';
+        } else if (error.message.includes('Hotel details not found')) {
+            errorMessage = 'Missing hotel information required for invoice.';
+            statusCode = 400;
+        } else if (error.message.includes('Booking not found')) {
+            errorMessage = 'Booking information not found.';
+            statusCode = 404;
+        }
+
+        res.status(statusCode).json({ error: errorMessage });
+    }
+}
+
+// Get Invoice Details including Hotel Information
+async function getInvoiceDetails(req, res) {
+    try {
+        const { booking_id } = req.params;
+        const user_id = req.user.user_id;
+
+        // Get hotel details first since they're common for all invoices
+        const { data: hotelDetails, error: hotelError } = await supabase
+            .from('hotel_details')
+            .select(`
+                hotel_id,
+                hotel_name,
+                hotel_logo_url,
+                address_line1,
+                city,
+                state,
+                country,
+                pin_code,
+                gst_number
+                
+               
+                
+            `)
+            .eq('user_id', user_id)
+            .single();
+
+        if (hotelError) {
+            // console.error('Error fetching hotel details:', hotelError);
+            return res.status(500).json({ error: 'Failed to fetch hotel details' });
+        }
+
+        if (!hotelDetails) {
+            return res.status(404).json({ error: 'Hotel details not found' });
+        }
+
+        // Get booking details including customer and primary guest
+        const { data: booking, error: bookingError } = await supabase
             .from('bookings')
             .select(`
                 *,
-                customer:cust_id (*),
+                customers:cust_id (*),
                 booking_rooms!inner (
                     room_id,
                     price_per_night,
@@ -609,63 +819,103 @@ async function downloadInvoice(req, res) {
                         price_per_night
                     )
                 ),
-                booking_guests!inner (
-                    name,
-                    phone,
-                    email,
-                    id_proof,
-                    is_primary
+                booking_guests (
+                    *
                 )
             `)
             .eq('booking_id', booking_id)
+            // .eq('user_id', user_id)
             .single();
 
-        if (error) throw error;
+        if (bookingError) {
+            // console.error('Error fetching booking details:', bookingError);
+            return res.status(500).json({ error: 'Failed to fetch booking details' });
+        }
+
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        if (booking.payment_status !== 'Paid') {
+        // Check payment status
+        if (booking.payment_status !== PAYMENT_STATUS.PAID) {
             return res.status(400).json({ error: 'Invoice is only available for paid bookings' });
         }
 
-        // Format booking data
-        booking.primary_guest = booking.booking_guests.find(g => g.is_primary);
-        booking.additional_guests = booking.booking_guests.filter(g => !g.is_primary);
-        booking.rooms = booking.booking_rooms.map(br => ({
-            ...br.rooms,
-            price_per_night: br.price_per_night
-        }));
+        // Process guests information
+        const primaryGuest = booking.booking_guests.find(g => g.is_primary) || {};
+        const additionalGuests = booking.booking_guests.filter(g => !g.is_primary) || [];
 
-        const PDFDocument = require('pdfkit');
-        const { generateInvoicePDF } = require('../utils/pdfGenerator');
+        const invoiceData = {
+            // Invoice details
+            booking_id: booking.booking_id,
+            created_at: booking.created_at,
+            
+            // Hotel details
+            hotel: {
+                hotel_id: hotelDetails.hotel_id,
+                hotel_name: hotelDetails.hotel_name,
+                hotel_logo_url: hotelDetails.hotel_logo_url,
+                address_line1: hotelDetails.address_line1,
+                city: hotelDetails.city,
+                state: hotelDetails.state,
+                country: hotelDetails.country,
+                pin_code: hotelDetails.pin_code,
+                gst_number: hotelDetails.gst_number
+            },
+            
+            // Booking details
+            booking: {
+                check_in_date: booking.checkin_date,
+                check_out_date: booking.checkout_date,
+                checkin_time: booking.checkin_time,
+                checkout_time: booking.checkout_time,
+                total_nights: booking.nights,
+                total_amount: booking.total_amount,
+                payment_status: booking.payment_status,
+                rooms: booking.booking_rooms.map(br => ({
+                    room_number: br.rooms.room_number,
+                    room_type: br.rooms.room_type,
+                    price_per_night: br.price_per_night || br.rooms.price_per_night
+                }))
+            },
+            
+            // Customer & Guest details
+            customer: {
+                name: booking.customers.name,
+                phone: booking.customers.phone,
+                email: booking.customers.email,
+                address: {
+                    address_line1: booking.customers.address_line1,
+                    address_line2: booking.customers.address_line2,
+                    city: booking.customers.city,
+                    state: booking.customers.state,
+                    country: booking.customers.country,
+                    pin: booking.customers.pin
+                },
+                gst_number: booking.customers.gst_number,
+                meal_plan: booking.customers.meal_plan
+            },
+            guests: {
+                primary: primaryGuest,
+                additional: additionalGuests
+            }
+        };
 
-        // Create PDF document
-        const doc = new PDFDocument();
-        
-        // Set response headers
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=invoice-${booking_id}.pdf`);
-
-        // Pipe the PDF document to the response
-        doc.pipe(res);
-
-        // Generate invoice content
-        generateInvoicePDF(booking, doc);
-
-        // Finalize PDF file
-        doc.end();
+        res.json(invoiceData);
     } catch (error) {
-        // console.error('Error generating invoice:', error);
-        res.status(500).json({ error: 'Failed to generate invoice' });
+        // console.error('Error fetching invoice details:', error);
+        res.status(500).json({ error: 'Failed to fetch invoice details' });
     }
 }
 
 // Export all controller functions
-module.exports.createBooking = createBooking;
-module.exports.checkinBooking = checkinBooking;
-module.exports.checkoutBooking = checkoutBooking;
-module.exports.getBookings = getBookings;
-module.exports.updatePaymentStatus = updatePaymentStatus;
-module.exports.getBookingForBill = getBookingForBill;
-module.exports.downloadInvoice = downloadInvoice;
+module.exports = {
+    createBooking,
+    checkinBooking,
+    checkoutBooking,
+    getBookings,
+    updatePaymentStatus,
+    getBookingForBill,
+    downloadInvoice,
+    getInvoiceDetails
+}; // End of exports

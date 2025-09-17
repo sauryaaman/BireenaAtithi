@@ -1,0 +1,172 @@
+.invoice-container {
+  padding: 20px;
+  max-width: 210mm; /* A4 width */
+  margin: 0 auto;
+  background: white;
+}
+
+.invoice-actions {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.invoice-actions button {
+  padding: 8px 16px;
+  cursor: pointer;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.invoice-actions button:hover {
+  background: #0056b3;
+}
+
+.invoice {
+  padding: 20px;
+  border: 1px solid #ddd;
+  background: white;
+  font-size: 12px;
+}
+
+/* Header Styles */
+.invoice-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 10px;
+}
+
+.hotel-logo {
+  width: 100px;
+  margin-right: 20px;
+}
+
+.hotel-logo img {
+  max-width: 100%;
+  height: auto;
+}
+
+.hotel-info h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+/* Details Section */
+.invoice-details {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.left-details, .right-details {
+  width: 48%;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 5px;
+}
+
+.label {
+  width: 120px;
+  font-weight: bold;
+}
+
+/* Charges Table */
+.charges-section table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.charges-section th, .charges-section td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.charges-section th {
+  background-color: #f8f9fa;
+}
+
+/* GST Summary */
+.gst-summary {
+  margin: 20px 0;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+/* Footer Styles */
+.invoice-footer {
+  margin-top: 20px;
+}
+
+.terms {
+  font-size: 11px;
+  margin-bottom: 20px;
+}
+
+.footer-details {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.gst-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.signatures {
+  display: flex;
+  gap: 50px;
+}
+
+.guest-signature, .cashier {
+  text-align: center;
+  border-top: 1px solid #000;
+  padding-top: 5px;
+  width: 150px;
+}
+
+.hotel-footer {
+  text-align: center;
+  font-size: 11px;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
+}
+
+.checkout-note {
+  margin-bottom: 10px;
+}
+
+.hotel-address {
+  font-style: italic;
+}
+
+.hotel-address p {
+  margin: 2px 0;
+}
+
+@media print {
+  .invoice-actions {
+    display: none;
+  }
+  
+  .invoice-container {
+    padding: 0;
+  }
+  
+  .invoice {
+    border: none;
+  }
+}

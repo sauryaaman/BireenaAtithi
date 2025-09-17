@@ -11,7 +11,20 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
-// Middleware
+// Test database connection
+const supabase = require('./config/db');
+app.get('/api/health', async (req, res) => {
+    try {
+        const { data, error } = await supabase.from('rooms').select('count');
+        if (error) throw error;
+        res.json({ status: 'ok', database: 'connected' });
+    } catch (err) {
+        console.error('Database connection error:', err);
+        res.status(500).json({ status: 'error', database: 'disconnected', error: err.message });
+    }
+});
+
+Middleware
 const allowedOrigins = [
   "https://bireena-atithi.vercel.app"    // prod frontend
 ];
@@ -34,8 +47,15 @@ app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    // console.error(err.stack);
-    res.status(500).json({ message: 'Something went wrong!' });
+    console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        details: err
+    });
+    res.status(500).json({ 
+        message: 'Internal server error',
+        error: err.message
+    });
 });
 
 const PORT = process.env.PORT || 5000;
