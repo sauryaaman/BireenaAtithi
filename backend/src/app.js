@@ -24,7 +24,7 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
-Middleware
+
 const allowedOrigins = [
   "https://bireena-atithi.vercel.app"    // prod frontend
 ];
