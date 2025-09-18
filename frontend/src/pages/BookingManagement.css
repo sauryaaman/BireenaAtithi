@@ -458,8 +458,83 @@
 
 .checkout-btn {
   background-color: #4CAF50;
-}
+} */
 
 .checkout-btn:hover {
   background-color: #45a049;
+}
+.payment-status.payment-refund {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+
+
+.actions-cell,
+.view-cell,
+.edit-cell {
+  padding: 8px;
+  text-align: center;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.view-btn,
+.edit-btn,
+.cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.view-btn {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.edit-btn {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.cancel-btn {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.checkin-btn {
+  background-color: #4caf50;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.checkout-btn {
+  background-color: #f44336;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.checkout-complete {
+  color: #757575;
+  font-style: italic;
 }

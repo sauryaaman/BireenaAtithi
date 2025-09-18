@@ -273,18 +273,60 @@ const deleteRoom = async (req, res) => {
     try {
         const { room_id } = req.params;
         const user_id = req.user.user_id;
+        console.log('Attempting to delete room:', room_id, 'for user:', user_id);
 
-        const { error } = await supabase
+        // First check if room exists and belongs to the user
+        const { data: room, error: roomError } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('room_id', room_id)
+            .eq('user_id', user_id)
+            .single();
+
+        if (roomError) {
+            console.log('Error finding room:', roomError);
+            return res.status(404).json({ message: 'Room not found' });
+        }
+
+        // Check if room is currently in use (has active bookings)
+        const { data: activeBookings, error: bookingError } = await supabase
+            .from('booking_rooms')
+            .select('booking_id, bookings!inner(status)')
+            .eq('room_id', room_id)
+            .in('bookings.status', ['Upcoming', 'Checked-in']);
+
+        if (bookingError) {
+            console.log('Error checking bookings:', bookingError);
+            throw bookingError;
+        }
+
+        if (activeBookings && activeBookings.length > 0) {
+            console.log('Cannot delete room with active bookings:', activeBookings);
+            return res.status(400).json({ 
+                message: 'Cannot delete room as it has active or upcoming bookings' 
+            });
+        }
+
+        // Now safe to delete the room
+        const { error: deleteError } = await supabase
             .from('rooms')
             .delete()
             .eq('room_id', room_id)
-            .eq('user_id', user_id);  // Security check
+            .eq('user_id', user_id);
 
-        if (error) throw error;
+        if (deleteError) {
+            console.log('Error during room deletion:', deleteError);
+            throw deleteError;
+        }
 
+        console.log('Room deleted successfully');
         res.json({ message: 'Room deleted successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.log('Server error in deleteRoom:', error);
+        res.status(500).json({ 
+            message: 'Server error while deleting room', 
+            error: error.message 
+        });
     }
 };
 

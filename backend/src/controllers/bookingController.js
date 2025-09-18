@@ -836,7 +836,11 @@ async function getInvoiceDetails(req, res) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        // Check payment status
+        // Check payment status and booking status
+        if (booking.status.toLowerCase() === 'cancelled') {
+            return res.status(400).json({ error: 'Invoice is not available for cancelled bookings' });
+        }
+
         if (booking.payment_status !== PAYMENT_STATUS.PAID) {
             return res.status(400).json({ error: 'Invoice is only available for paid bookings' });
         }

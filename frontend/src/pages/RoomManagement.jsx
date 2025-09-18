@@ -73,7 +73,7 @@ const RoomManagement = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${BASE_URL}/api/rooms`, { ...formData, status: 'AVAILABLE' }, {
+      await axios.post(`${BASE_URL}/api/rooms`, { ...formData, status: 'Available' }, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -83,7 +83,7 @@ const RoomManagement = () => {
         room_number: '',
         room_type: 'standard',
         price_per_night: '',
-        status: 'available'
+        status: 'Available'
       });
       fetchRooms();
     } catch (err) {
@@ -106,7 +106,7 @@ const RoomManagement = () => {
 
       await axios.put(`${BASE_URL}/api/rooms/${editingRoom.room_id}`, {
         ...formData,
-        status: 'AVAILABLE' // Ensure status stays AVAILABLE
+        status: 'Available' // Ensure status stays AVAILABLE
       }, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -140,6 +140,7 @@ const RoomManagement = () => {
         });
         fetchRooms();
       } catch (err) {
+        console.log('Error deleting room:', err);
         setError(err.response?.data?.message || 'Failed to delete room');
       }
     }
@@ -298,9 +299,9 @@ const RoomManagement = () => {
                   <button className="edit-button" onClick={() => handleEdit(room)}>
                     <RiEdit2Line /> Edit
                   </button>
-                  <button className="delete-button" onClick={() => handleDeleteRoom(room.room_id)}>
+                  {/* <button className="delete-button" onClick={() => handleDeleteRoom(room.room_id)}>
                     <RiDeleteBinLine /> Delete
-                  </button>
+                  </button> */}
                 </>
               )}
             </div>
@@ -328,7 +329,7 @@ const RoomManagement = () => {
               <div className="form-group">
                 <label>Room Number</label>
                 <input
-                  type="number"
+                  type="text"
                   value={formData.room_number}
                   onChange={(e) => setFormData({...formData, room_number: e.target.value})}
                   required
@@ -363,7 +364,7 @@ const RoomManagement = () => {
               <div className="form-group">
                 <label>Price per Night</label>
                 <input
-                  type="number"
+                  type="text"
                   value={formData.price_per_night}
                   onChange={(e) => setFormData({...formData, price_per_night: e.target.value})}
                   required

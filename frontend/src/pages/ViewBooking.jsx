@@ -15,19 +15,19 @@ const ViewBooking = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookingData, setBookingData] = useState(null);
-
+console.log("bookingId:",bookingId);
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`${BASE_URL}/api/bookings/${bookingId}/invoice/details`, {
+        const response = await axios.get(`${BASE_URL}/api/bookings/${bookingId}/details`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         if (!response.data) {
           throw new Error('Invalid booking data received');
         }
-
+        // console.log("geting response:",response.data);
         const { booking, customer, guests } = response.data;
         setBookingData(response.data);
         setLoading(false);

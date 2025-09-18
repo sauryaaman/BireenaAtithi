@@ -236,6 +236,34 @@ const BookingManagement = () => {
     }
   };
 
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
+
+    try {
+      setError('');
+      const token = localStorage.getItem('token');
+      
+      await axios.put(
+        `${BASE_URL}/api/bookings/${bookingId}/cancel`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Broadcast event to refresh room status
+      window.dispatchEvent(new CustomEvent('roomStatusChanged'));
+
+      // Refresh bookings list
+      await fetchBookings();
+      alert('Booking cancelled successfully!');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Failed to cancel booking';
+      setError(errorMsg);
+      alert(errorMsg);
+    }
+  };
+
   const handleViewInvoice = async (bookingId) => {
     try {
       // console.log('Starting invoice download for booking:', bookingId);
@@ -422,6 +450,12 @@ const BookingManagement = () => {
           >
             Past
           </button>
+          <button 
+            className={filter === 'cancelled' ? 'active' : ''}
+            onClick={() => setFilter('cancelled')}
+          >
+            Cancelled
+          </button>
         </div>
 
         <div className="sort-options">
@@ -459,7 +493,10 @@ const BookingManagement = () => {
                 <th>Amount</th>
                 <th>Bill</th>
                 <th>Actions</th>
-                <th>Edit/Delete</th>
+                
+                <th>View</th>
+                <th>Edit</th>
+                <th>Cancel</th>
               </tr>
             </thead>
             <tbody>
@@ -495,7 +532,15 @@ const BookingManagement = () => {
                   </td>
                   <td>
                     <div className="payment-action">
-                      {booking.payment_status !== 'PAID' ? (
+                      {booking.payment_status === 'REFUND' ? (
+                        <span className="payment-status payment-refund">
+                          Refund
+                        </span>
+                      ) : booking.payment_status === 'PAID' ? (
+                        <span className="payment-status payment-paid">
+                          Paid
+                        </span>
+                      ) : (
                         <div>
                           <select
                             value={booking.payment_status}
@@ -507,10 +552,6 @@ const BookingManagement = () => {
                             <option value="PAID">Paid</option>
                           </select>
                         </div>
-                      ) : (
-                        <span className="payment-status payment-paid">
-                          Paid
-                        </span>
                       )}
                     </div>
                   </td>
@@ -527,14 +568,7 @@ const BookingManagement = () => {
                     </button>
                   </td>
                   <td className="actions-cell">
-                    <button
-                      onClick={() => navigate(`/edit-booking/${booking.booking_id}`)}
-                      className="edit-btn"
-                      title="Edit Booking"
-                    >
-                      <RiEdit2Line />
-                      <span className="icon-text">Edit</span>
-                    </button>
+                 
                     {/* Check-in button for upcoming bookings */}
                     {booking.status?.toLowerCase() === 'upcoming' && (
                       <button 
@@ -557,25 +591,61 @@ const BookingManagement = () => {
                     {booking.status?.toLowerCase() === 'checked-out' && (
                       <span className="checkout-complete">Completed</span>
                     )}
+                     {booking.status?.toLowerCase() === 'cancelled' && (
+                      <span className="cancelled-status">Cancelled</span>
+                    )}
+                    {/* {['upcoming', 'checked-in'].includes(booking.status?.toLowerCase()) && (
+                      <button 
+                        onClick={() => handleCancelBooking(booking.booking_id)}
+                        className="cancel-btn"
+                        title="Cancel Booking"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    {booking.status?.toLowerCase() === 'cancelled' && (
+                      <span className="cancelled-status">Cancelled</span>
+                    )} */}
                   </td>
-                  <td className="edit-delete-cell">
+                       
+                  <td className="view-cell">
                     <button
                       onClick={() => navigate(`/booking/view/${booking.booking_id}`)}
+                      className="view-btn"
+                      title="View Booking Details"
+                    >
+                      <RiEyeLine />
+                      <span className="icon-text">View</span>
+                    </button>
+                   
+                  </td>
+                   <td className="edit-cell">
+                          <button
+                      onClick={() => navigate(`/edit-booking/${booking.booking_id}`)}
                       className="edit-btn"
                       title="Edit Booking"
                     >
                       <RiEdit2Line />
-                      <span className="icon-text">View</span>
+                      <span className="icon-text">Edit</span>
                     </button>
-                    {/* <button
-                      onClick={() => handleDeleteBooking(booking.booking_id)}
-                      className="delete-btn"
-                      title="Delete Booking"
-                    >
-                      <RiCloseLine />
-                      <span className="icon-text">Delete</span>
-                    </button> */}
                   </td>
+                  <td className='edit-cell'>
+                     
+                    {['upcoming', 'checked-in'].includes(booking.status?.toLowerCase()) && (
+                      <button 
+                        onClick={() => handleCancelBooking(booking.booking_id)}
+                        className="cancel-btn"
+                        title="Cancel Booking"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    {/* {booking.status?.toLowerCase() === 'cancelled' && (
+                      <span className="cancelled-status">Cancelled</span>
+                    )} */}
+
+                  </td>
+                 
                 </tr>
               ))}
             </tbody>

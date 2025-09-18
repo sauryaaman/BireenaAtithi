@@ -17,6 +17,7 @@ const {
     getAvailableRooms
 } = require('../controllers/updateBookingController');
 const {getBookingDetails} = require('../controllers/getBookingDetailsController');
+const {cancelBooking} = require('../controllers/cancelBookingController');
 
 router.use(auth);  // All booking routes require authentication
 
@@ -28,6 +29,8 @@ router.get('/:booking_id', verifyBookingAccess, getBookingDetails);
 
 // Routes that require booking access verification
 router.put('/:booking_id/checkin', verifyBookingAccess, checkinBooking);
+router.put('/:booking_id/checkout', verifyBookingAccess, checkoutBooking);
+router.put('/:booking_id/cancel', verifyBookingAccess, cancelBooking);  // New cancel endpoint
 router.put('/:booking_id/checkout', verifyBookingAccess, checkoutBooking);
 router.put('/:booking_id/payment', verifyBookingAccess, updatePaymentStatus);
 router.get('/:booking_id/bill', verifyBookingAccess, getBookingForBill);

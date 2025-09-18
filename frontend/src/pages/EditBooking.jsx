@@ -133,10 +133,10 @@ const EditBooking = () => {
             const bookingData = response.data.booking;
             const customerData = response.data.customer;
             const guestsData = response.data.guests;
-            console.log("booingData", bookingData);
-            console.log("statusbooking", bookingData.status);
-            console.log("customerData", customerData);
-            console.log("guestsData", guestsData);
+            // console.log("booingData", bookingData);
+            // console.log("statusbooking", bookingData.status);
+            // console.log("customerData", customerData);
+            // console.log("guestsData", guestsData);
             // Safely parse dates
             const checkInDate = bookingData.check_in_date ? new Date(bookingData.check_in_date) : null;
             const checkOutDate = bookingData.check_out_date ? new Date(bookingData.check_out_date) : null;
@@ -787,7 +787,7 @@ const EditBooking = () => {
                 room_type: room.roomType || room.room_type,
                 room_number: room.roomNumber || room.room_number,
                 price_per_night: pricePerNight,
-                status: formData.bookingStatus === 'CChecked-in' ? 'Occupied' :
+                status: formData.bookingStatus === 'Checked-in' ? 'Occupied' :
                         formData.bookingStatus === 'Checked-out' ? 'Available' : 'Booked'
             };
         });
@@ -926,6 +926,7 @@ const EditBooking = () => {
                             <option value="Upcoming">Upcoming</option>
                             <option value="Checked-in">Checked In</option>
                             <option value="Checked-out">Checked Out</option>
+                            <option value="Cancelled">Cancelled </option>
                         </select>
                     </div>
                     <div className="form-group">
@@ -939,6 +940,7 @@ const EditBooking = () => {
                             <option value="UNPAID">Unpaid</option>
                             <option value="PARTIAL">Partial</option>
                             <option value="PAID">Paid</option>
+                            <option value="REFUND">Refund</option>
                         </select>
                     </div>
                 </div>

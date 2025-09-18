@@ -2,14 +2,15 @@ const supabase = require('../config/db');
 
 const getBookingDetails = async (req, res) =>{
     try {
+        
         const { booking_id } = req.params;
         const user_id = req.user.user_id;
 
-        // console.log('Fetching booking details for:', {
-        //     booking_id,
-        //     user_id,
-        //     params: req.params
-        // });
+        console.log('Fetching booking details for:', {
+            booking_id,
+            user_id,
+            params: req.params
+        });
 
         // Get booking details including customer and primary guest
         const { data: booking, error: bookingError } = await supabase
