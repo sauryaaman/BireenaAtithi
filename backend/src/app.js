@@ -26,7 +26,9 @@ app.get('/api/health', async (req, res) => {
 
 
 const allowedOrigins = [
-  "https://bireena-atithi.vercel.app"    // prod frontend
+  "https://bireena-atithi.vercel.app",
+   "https://www.bireenaatithi.in",
+    "https://bireenaatithi.in"    // prod frontend
 ];
 
 app.use(cors({
