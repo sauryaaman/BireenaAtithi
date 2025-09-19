@@ -5,8 +5,8 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "postinstall": "bash render-build.sh"
+    "dev": "nodemon src/app.js"
+    
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.33.1",
