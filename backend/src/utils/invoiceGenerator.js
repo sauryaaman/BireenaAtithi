@@ -3,6 +3,7 @@ const handlebars = require('handlebars');
 const path = require('path');
 const fs = require('fs');
 
+
 // Helper functions for formatting
 handlebars.registerHelper('formatDate', function(date) {
     return new Date(date).toLocaleDateString('en-IN', {
@@ -125,8 +126,12 @@ async function generateInvoicePDF(invoiceData) {
 
         // Launch Puppeteer with necessary configurations
         // console.log('Launching Puppeteer...');
+        const isRender = process.env.NODE_ENV === 'production';
         browser = await puppeteer.launch({
             headless: 'new',
+             executablePath: isRender 
+        ? process.env.CHROMIUM_PATH || '/usr/bin/chromium'  // Render
+        :  undefined, //
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -135,7 +140,7 @@ async function generateInvoicePDF(invoiceData) {
             ]
         });
 
-        // console.log('Puppeteer launched successfully');
+         console.log('Puppeteer launched successfully');
 
         const page = await browser.newPage();
 
