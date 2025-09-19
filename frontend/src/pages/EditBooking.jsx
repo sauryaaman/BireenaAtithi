@@ -11,7 +11,7 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 
 const EditBooking = () => {
     const { bookingId } = useParams();
-    console.log("bookingId:", bookingId);
+    // console.log("bookingId:", bookingId);
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
