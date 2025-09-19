@@ -132,5 +132,5 @@ frontend/dist/
 *.db
 
 # Ignore package-lock and yarn.lock if not needed
-package-lock.json
-yarn.lock
+# package-lock.json
+# yarn.lock
