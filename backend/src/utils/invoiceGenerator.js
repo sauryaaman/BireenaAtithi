@@ -125,13 +125,10 @@ async function generateInvoicePDF(invoiceData) {
         // console.log('Final HTML length:', finalHtml.length);
 
         // Launch Puppeteer with necessary configurations
-        // console.log('Launching Puppeteer...');
-        const isRender = process.env.NODE_ENV === 'production';
+        
         browser = await puppeteer.launch({
             headless: 'new',
-             executablePath: isRender 
-        ? process.env.CHROMIUM_PATH || '/usr/bin/chromium'  // Render
-        :  undefined, //
+            executablePath:undefined, 
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
