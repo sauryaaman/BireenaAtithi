@@ -184,6 +184,8 @@ const Invoice = () => {
         } else if (error.response.data?.error) {
           errorMessage = error.response.data.error;
         } else if (error.response.status === 500) {
+          console.error('Server error details:', error.response.data);
+          cosnole.log('Server error detected', error.response.data);
           errorMessage = 'Server error while generating invoice. Please try again.';
           // console.error('Server error details:', error.response.data);
         }

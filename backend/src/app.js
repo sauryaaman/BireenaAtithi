@@ -26,8 +26,8 @@ app.get('/api/health', async (req, res) => {
 
 
 const allowedOrigins = [
-    // "http://localhost:3000", // local dev
-  "https://bireena-atithi.vercel.app",
+   "http://localhost:3000", // local dev
+    "https://bireena-atithi.vercel.app",
    "https://www.bireenaatithi.in",
     "https://bireenaatithi.in"    // prod frontend
 ];
