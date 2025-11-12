@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { Dialog, Transition } from '@headlessui/react';
+import { toast } from 'react-hot-toast';
+import RefundModal from '../components/Booking/RefundModal';
 import {
   RiAddLine,
   RiSearchLine,
@@ -26,6 +29,15 @@ const BookingManagement = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // New state for payment modal
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [paymentBooking, setPaymentBooking] = useState(null);
+  const [selectedBookingForRefund, setSelectedBookingForRefund] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newAmount, setNewAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState('Cash');
 
   // Function to refresh bookings data and notify room status changes
   const fetchBookings = async () => {
@@ -42,7 +54,7 @@ const BookingManagement = () => {
       const { data } = await axios.get(`${BASE_URL}/api/bookings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+      // console.log('Fetched bookings data:', data);
       if (Array.isArray(data)) {
         setBookings(data);
         if (data.length === 0) {
@@ -134,6 +146,60 @@ const BookingManagement = () => {
     navigate(`/booking/edit/${bookingId}`);
   };
 
+  // Function to handle opening the payment modal
+  const handleOpenPaymentModal = (booking) => {
+    setPaymentBooking(booking);
+    setNewAmount('');
+    setPaymentMode('CASH');
+    setShowPaymentModal(true);
+  };
+
+  // Function to handle payment submission
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!newAmount || parseFloat(newAmount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    const amountToAdd = parseFloat(newAmount);
+    if (amountToAdd > (paymentBooking.amount_due || paymentBooking.total_amount - (paymentBooking.amount_paid || 0))) {
+      toast.error('Payment amount cannot exceed the amount due');
+      return;
+    }
+
+    // Format payment mode to match database constraint ('Cash', 'Card', etc.)
+    const formattedPaymentMode = paymentMode === 'UPI' ? 'UPI' : 
+      paymentMode === 'Bank Transfer' ? 'Bank Transfer' : 
+      paymentMode.charAt(0).toUpperCase() + paymentMode.slice(1).toLowerCase();
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${BASE_URL}/api/bookings/${paymentBooking.booking_id}/payment`,
+        {
+          amount_paid: amountToAdd,
+          payment_mode: formattedPaymentMode
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      toast.success('Payment added successfully');
+      setShowPaymentModal(false);
+      setPaymentBooking(null);
+      await fetchBookings(); // Refresh the bookings list
+    } catch (err) {
+      console.error('Payment error:', err);
+      toast.error(err.response?.data?.message || 'Failed to add payment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handlePayment = async (bookingId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
@@ -149,10 +215,10 @@ const BookingManagement = () => {
       await fetchBookings();
       
       // Show success message
-      alert(`Payment status updated to ${newStatus}`);
+      toast.success(`Payment status updated to ${newStatus}`);
     } catch (err) {
       console.error('Payment update error:', err);
-      alert(err.response?.data?.message || 'Failed to update payment status');
+      toast.error(err.response?.data?.message || 'Failed to update payment status');
     }
   };
 
@@ -236,32 +302,9 @@ const BookingManagement = () => {
     }
   };
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) {
-      return;
-    }
-
-    try {
-      setError('');
-      const token = localStorage.getItem('token');
-      
-      await axios.put(
-        `${BASE_URL}/api/bookings/${bookingId}/cancel`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Broadcast event to refresh room status
-      window.dispatchEvent(new CustomEvent('roomStatusChanged'));
-
-      // Refresh bookings list
-      await fetchBookings();
-      alert('Booking cancelled successfully!');
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to cancel booking';
-      setError(errorMsg);
-      alert(errorMsg);
-    }
+  const handleCancelBooking = (booking) => {
+    setSelectedBookingForRefund(booking);
+    setShowRefundModal(true);
   };
 
   const handleViewInvoice = async (bookingId) => {
@@ -490,7 +533,10 @@ const BookingManagement = () => {
                 <th>Nights</th>
                 <th>Status</th>
                 <th>Payment</th>
-                <th>Amount</th>
+                <th>Total Amount</th>
+                <th>Amount Paid</th>
+                <th>Amount Due</th>
+                <th>Add payment</th>
                 <th>Bill</th>
                 <th>Actions</th>
                 
@@ -532,30 +578,36 @@ const BookingManagement = () => {
                   </td>
                   <td>
                     <div className="payment-action">
-                      {booking.payment_status === 'REFUND' ? (
-                        <span className="payment-status payment-refund">
-                          Refund
-                        </span>
-                      ) : booking.payment_status === 'PAID' ? (
-                        <span className="payment-status payment-paid">
-                          Paid
-                        </span>
-                      ) : (
-                        <div>
-                          <select
-                            value={booking.payment_status}
-                            onChange={(e) => handlePayment(booking.booking_id, e.target.value)}
-                            className={`payment-status-select payment-${booking.payment_status?.toLowerCase()}`}
-                          >
-                            <option value="UNPAID">Unpaid</option>
-                            <option value="PARTIAL">Partial</option>
-                            <option value="PAID">Paid</option>
-                          </select>
-                        </div>
-                      )}
+                      <span className={`payment-status payment-${booking.payment_status?.toLowerCase()}`}>
+                        {booking.payment_status === 'REFUND' ? 'Refund' : 
+                         booking.payment_status === 'PAID' ? 'Paid' : 
+                         booking.payment_status === 'PARTIAL' ? 'Partial' : 'Unpaid'}
+                      </span>
                     </div>
                   </td>
                   <td>₹{booking.total_amount}</td>
+                  <td>₹{booking.amount_paid || 0}</td>
+                  {/* <td>₹{booking.amount_due
+                   || (booking.total_amount - (booking.amount_paid || 0))}</td> */}
+
+                   <td>₹{booking.amount_due}</td>
+
+                  <td>
+                    <button
+                      onClick={() => handleOpenPaymentModal(booking)}
+                      className="add-payment-btn"
+                      disabled={booking.status?.toLowerCase() === 'cancelled' || booking.payment_status === 'PAID'}
+                      title={
+                        booking.status?.toLowerCase() === 'cancelled'
+                          ? 'Cannot add payment to cancelled booking'
+                          : booking.payment_status === 'PAID'
+                          ? 'Booking is fully paid'
+                          : 'Add payment'
+                      }
+                    >
+                      Add Payment
+                    </button>
+                  </td>
                   <td>
                     <button 
                       onClick={() => handleViewInvoice(booking.booking_id)}
@@ -633,16 +685,28 @@ const BookingManagement = () => {
                      
                     {['upcoming', 'checked-in'].includes(booking.status?.toLowerCase()) && (
                       <button 
-                        onClick={() => handleCancelBooking(booking.booking_id)}
+                        onClick={() => handleCancelBooking(booking)}
                         className="cancel-btn"
                         title="Cancel Booking"
                       >
                         Cancel
+
                       </button>
                     )}
-                    {/* {booking.status?.toLowerCase() === 'cancelled' && (
-                      <span className="cancelled-status">Cancelled</span>
-                    )} */}
+                    {booking.status?.toLowerCase() === 'cancelled' && (
+                      <span className="cancelled-status">
+                        {booking.refund_amount ? (
+                          <div>
+                            <div>Refunded ₹{booking.refund_amount}</div>
+                            {booking.refunded_at && (
+                              <small className="text-gray-500">
+                                {format(new Date(booking.refunded_at), 'dd MMM yyyy')}
+                              </small>
+                            )}
+                          </div>
+                        ) : 'Cancelled'}
+                      </span>
+                    )}
 
                   </td>
                  
@@ -652,6 +716,153 @@ const BookingManagement = () => {
           </table>
         </div>
       )}
+
+      {/* Payment Modal */}
+      <Transition appear show={showPaymentModal} as={Fragment}>
+        <Dialog 
+          as="div" 
+          className="relative z-10" 
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPaymentBooking(null);
+          }}
+        >
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900 mb-4"
+                  >
+                    Add Payment for Booking #{paymentBooking?.booking_id}
+                  </Dialog.Title>
+
+                  {paymentBooking && (
+                    <>
+                      <div className="mb-4 bg-gray-50 p-4 rounded-lg">
+                        <p className="mb-2">
+                          <span className="font-medium">Customer:</span>{' '}
+                          {paymentBooking.customer?.name || paymentBooking.primary_guest?.name}
+                        </p>
+                        <div className="text-sm text-gray-600">
+                          <p className="flex justify-between py-1">
+                            <span>Total Amount:</span>
+                            <span>₹{paymentBooking.total_amount}</span>
+                          </p>
+                          <p className="flex justify-between py-1">
+                            <span>Amount Paid:</span>
+                            <span>₹{paymentBooking.amount_paid || 0}</span>
+                          </p>
+                          <p className="flex justify-between py-1 font-medium">
+                            <span>Amount Due:</span>
+                            <span>₹{paymentBooking.amount_due || (paymentBooking.total_amount - (paymentBooking.amount_paid || 0))}</span>
+                          </p>
+                          {newAmount && (
+                            <p className="flex justify-between py-1 text-green-600 font-medium border-t mt-2 pt-2">
+                              <span>New Amount Due:</span>
+                              <span>₹{(paymentBooking.amount_due || (paymentBooking.total_amount - (paymentBooking.amount_paid || 0))) - parseFloat(newAmount || 0)}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <form onSubmit={handlePaymentSubmit} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Payment Amount
+                          </label>
+                          <input
+                            type="number"
+                            value={newAmount}
+                            onChange={(e) => setNewAmount(e.target.value)}
+                            placeholder="Enter amount"
+                            className="w-full p-2 border rounded-md"
+                            max={paymentBooking.amount_due}
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Payment Mode
+                          </label>
+                          <select
+                            value={paymentMode}
+                            onChange={(e) => setPaymentMode(e.target.value)}
+                            className="w-full p-2 border rounded-md"
+                          >
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-6">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPaymentModal(false);
+                              setPaymentBooking(null);
+                            }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isSubmitting || !newAmount || parseFloat(newAmount) <= 0}
+                            className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            {isSubmitting ? 'Processing...' : 'Add Payment'}
+                          </button>
+                        </div>
+                      </form>
+                    </>
+                  )}
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Refund Modal */}
+      <RefundModal
+        isOpen={showRefundModal}
+        onClose={() => {
+          setShowRefundModal(false);
+          setSelectedBookingForRefund(null);
+        }}
+        booking={selectedBookingForRefund}
+        onRefundComplete={async () => {
+          await fetchBookings();
+          setShowRefundModal(false);
+          setSelectedBookingForRefund(null);
+        }}
+      />
 
       {/* Booking Detail Modal */}
       {showDetailModal && selectedBooking && (

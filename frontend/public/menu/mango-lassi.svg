@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#F3F4F6"/>
+  <path d="M160 100H240V200H160V100Z" fill="#9CA3AF"/>
+  <path d="M180 120C180 120 220 120 220 160C220 200 180 200 180 160C180 120 180 120 180 120Z" fill="#F3F4F6"/>
+  <text x="200" y="250" text-anchor="middle" font-family="Arial" font-size="16" fill="#6B7280">Mango Lassi</text>
+  <text x="200" y="270" text-anchor="middle" font-family="Arial" font-size="14" fill="#9CA3AF">Refreshing Drink</text>
+</svg>

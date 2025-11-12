@@ -182,7 +182,7 @@ const StatCard = ({ title, value, icon: Icon, color, bgColor, actionIcon, onActi
                                 width: `${(stats?.occupiedRooms / stats?.totalRooms) * 100}%`
                             }}
                         >
-                            <span>{stats?.occupiedRooms} Occupied</span>
+                            <span>{stats?.occupiedRooms} </span>
                         </div>
                          <div 
                             className="stacked-bar booked"
@@ -190,7 +190,7 @@ const StatCard = ({ title, value, icon: Icon, color, bgColor, actionIcon, onActi
                                 width: `${(stats?.bookedRooms / stats?.totalRooms) * 100}%`
                             }}
                         >
-                            <span>{stats?.bookedRooms} Booked</span>
+                            <span>{stats?.bookedRooms} </span>
                         </div>
                         <div 
                             className="stacked-bar available"
@@ -198,7 +198,7 @@ const StatCard = ({ title, value, icon: Icon, color, bgColor, actionIcon, onActi
                                 width: `${(stats?.availableRooms / stats?.totalRooms) * 100}%`
                             }}
                         >
-                            <span>{stats?.availableRooms} Available</span>
+                            <span>{stats?.availableRooms} </span>
                         </div>
                     </div>
                       <div className="distribution-legend">

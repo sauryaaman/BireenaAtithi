@@ -43,8 +43,55 @@
   padding: 20px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   border-bottom: 1px solid #e9ecef;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.status-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.payment-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 250px;
+}
+
+.amount-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px dashed #dee2e6;
+}
+
+.amount-info:last-child {
+  border-bottom: none;
+}
+
+.amount-label {
+  color: #6c757d;
+}
+
+.amount-value {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.amount-value.positive {
+  color: #28a745;
+}
+
+.amount-value.negative {
+  color: #dc3545;
+}
+
+.amount-value.refunded {
+  color: #6c757d;
 }
 
 .status-badge {
@@ -128,6 +175,31 @@
   background: #f8f9fa;
   border-radius: 6px;
   overflow: hidden;
+}
+
+.nightly-rates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.rate-card {
+  background: #f8f9fa;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.night-header {
+  background: #34495e;
+  color: white;
+  padding: 8px 12px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.rate-details {
+  padding: 12px;
 }
 
 .room-header {

@@ -1,6 +1,125 @@
 @import url('https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi:ital@0;1&family=Yatra+One&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Reset and base styles */
+@layer base {
+  :root {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-style: italic;
+    font-family: devanagari;
+  }
+
+  body {
+    @apply bg-white text-dark;
+  }
+
+  ::selection {
+    @apply bg-primary text-white;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer utilities {
+  .animate-slide {
+    animation: slide 20s linear infinite;
+  }
+
+  .font-devanagari {
+    font-family: 'Yatra One', cursive;
+  }
+
+  @keyframes slide {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-100%);
+    }
+  }
+}
+
+.animated{
+  animation: animated 10s ease-in-out infinite;
+}
+
+
+@keyframes animated {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+}
+
+.heading{
+  color: #fff;
+  /* font-size: 35px;  */
+  position: relative;
+  top: 7px;
+  left: 5px;
+  font-weight: 700;
+  -webkit-text-stroke: .8px red;
+}
+
+.heading::before{
+  position: absolute;
+  left: 0;
+  top: 18%;
+  content: 'BIREENA_अतिथि';
+  font-style: 'devanagari';
+  color: red;
+  border-right: 2px solid red;
+  animation: filling 4s linear infinite;
+  overflow: hidden;
+}
+
+@keyframes filling {
+  0% {
+    opacity: .4;
+    width: 0%;
+  }
+  50%{
+    opacity: 1;
+    width: 105%;
+  }
+  100%{
+    opacity: .4;
+    width: 0%;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .heading::before{
+  top: 10%;
+  
+}
+  
+}
+
+/* Reset and base styles  */
 * {
   margin: 0;
   padding: 0;
@@ -21,5 +140,5 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* -webkit-text-size-adjust: 100%; */
-}
+  -webkit-text-size-adjust: 100%;
+ } 

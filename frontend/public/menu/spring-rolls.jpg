@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#FFF7ED"/>
+  <circle cx="200" cy="150" r="60" fill="#FED7AA"/>
+  <text x="200" y="155" text-anchor="middle" font-family="Arial" font-size="16" fill="#9A3412">Spring Rolls</text>
+</svg>

@@ -9,14 +9,17 @@ import {
   RiMenuFoldLine,
   RiMenuUnfoldLine,
   RiFileAddLine,
-  RiLogoutBoxLine
+  RiLogoutBoxLine,
+  RiMoneyDollarCircleLine
 } from 'react-icons/ri';
+import Navbar from '../Navbar/Navbar';
 import './Sidebar.css';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 const Sidebar = ({ onCollapse }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hotelName, setHotelName] = useState('');
   const location = useLocation();
 
@@ -44,6 +47,7 @@ const Sidebar = ({ onCollapse }) => {
     { path: '/bookings', icon: RiCalendarCheckLine, text: 'Bookings' },
     { path: '/bookings/new', icon: RiFileAddLine, text: 'Add Booking' },
     { path: '/customers', icon: RiGroupLine, text: 'Customers' },
+    { path: '/cashier-report', icon: RiMoneyDollarCircleLine, text: 'Cashier Report' },
   ];
 
   const handleCollapse = () => {
@@ -58,39 +62,47 @@ const Sidebar = ({ onCollapse }) => {
   };
 
   return (
-    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      <div className="sidebar-header">
-        <h2 className="logo">
-          {isCollapsed ? hotelName.split(' ').map(word => word[0]).join('').slice(0, 2) : hotelName}
-        </h2>
-        <button 
-          className="collapse-btn"
-          onClick={handleCollapse}
-        >
-          {isCollapsed ? <RiMenuUnfoldLine /> : <RiMenuFoldLine />}
-        </button>
-      </div>
-
-      <nav className="sidebar-nav">
-        {menuItems.map(item => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+    <>
+      <Navbar 
+        hotelName={hotelName} 
+        onMenuClick={() => setIsMenuOpen(!isMenuOpen)}
+        isMenuOpen={isMenuOpen}
+      />
+      
+      <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <h2 className="logo">
+            {isCollapsed ? hotelName.split(' ').map(word => word[0]).join('').slice(0, 2) : hotelName}
+          </h2>
+          <button 
+            className="collapse-btn"
+            onClick={handleCollapse}
           >
-            <item.icon className="nav-icon" />
-            <span className="nav-text">{item.text}</span>
-          </Link>
-        ))}
-      </nav>
+            {isCollapsed ? <RiMenuUnfoldLine /> : <RiMenuFoldLine />}
+          </button>
+        </div>
 
-      <div className="sidebar-footer">
-        <button className="logout-btn" onClick={handleLogout}>
-          <RiLogoutBoxLine className="nav-icon" />
-          <span className="nav-text">Logout</span>
-        </button>
-      </div>
-    </aside>
+        <nav className="sidebar-nav">
+          {menuItems.map(item => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            >
+              <item.icon className="nav-icon" />
+              <span className="nav-text">{item.text}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <button className="logout-btn" onClick={handleLogout}>
+            <RiLogoutBoxLine className="nav-icon" />
+            <span className="nav-text">Logout</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 

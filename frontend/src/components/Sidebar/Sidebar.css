@@ -1,5 +1,20 @@
+:root {
+  --sidebar-width-desktop: 260px;
+  --sidebar-width-tablet: 200px;
+  --sidebar-collapsed-desktop: 80px;
+  --sidebar-collapsed-tablet: 70px;
+  --navbar-height: 60px;
+}
+
+/* Layout wrapper */
+.layout-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar styles */
 .sidebar {
-  width: 260px;
+  width: var(--sidebar-width-desktop);
   background: #1a1c23;
   color: #fff;
   transition: all 0.3s ease;
@@ -10,8 +25,67 @@
   left: 0;
   bottom: 0;
   z-index: 100;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Main content area */
+main {
+  flex: 1;
+  transition: margin 0.3s ease, padding 0.3s ease;
+}
+
+/* Desktop styles */
+@media (min-width: 1025px) {
+  main {
+    margin-left: var(--sidebar-width-desktop);
+  }
+
+  .sidebar.collapsed ~ main {
+    margin-left: var(--sidebar-collapsed-desktop);
+  }
+
+  .sidebar.collapsed {
+    width: var(--sidebar-collapsed-desktop);
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: var(--sidebar-width-tablet);
+  }
+
+  .sidebar.collapsed {
+    width: var(--sidebar-collapsed-tablet);
+  }
+
+  main {
+    margin-left: var(--sidebar-width-tablet);
+  }
+
+  .sidebar.collapsed ~ main {
+    margin-left: var(--sidebar-collapsed-tablet);
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  main {
+    margin-left: 0;
+    padding-top: var(--navbar-height);
+  }
+
+  /* Show navbar only on mobile */
+  .navbar-container {
+    display: block;
+  }
+}
+
+/* Desktop styles (unchanged) */
 .sidebar.collapsed {
   width: 80px;
 }
@@ -22,6 +96,7 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 70px;
 }
 
 .logo {
@@ -30,6 +105,7 @@
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .collapse-btn {
@@ -43,6 +119,7 @@
   align-items: center;
   justify-content: center;
   transition: color 0.2s;
+  z-index: 101;
 }
 
 .collapse-btn:hover {
@@ -55,6 +132,7 @@
   flex-direction: column;
   gap: 0.5rem;
   flex: 1;
+  overflow-y: auto;
 }
 
 .nav-item {
@@ -89,6 +167,7 @@
 .sidebar-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: auto;
 }
 
 .logout-btn {
@@ -102,7 +181,37 @@
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: all 0.2s;
-  border-radius: 6px;
+}
+
+/* Mobile and Tablet styles for logout button */
+@media (max-width: 1024px) {
+  .logout-btn {
+    padding: 1rem;
+  }
+
+  .collapsed .logout-btn .nav-text {
+    display: block;
+  }
+}
+
+/* Backdrop for mobile */
+@media (max-width: 768px) {
+  .sidebar:not(.collapsed)::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+  }
+
+  .logout-btn {
+    margin-bottom: env(safe-area-inset-bottom, 0);
+    padding: 1.2rem;
+    font-size: 1.1rem;
+  }
 }
 
 .logout-btn:hover {

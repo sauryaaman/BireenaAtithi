@@ -81,11 +81,35 @@ console.log("bookingId:",bookingId);
       <div className="details-container">
         {/* Booking Status */}
         <div className="status-section">
-          <div className={`status-badge ${booking.payment_status.toLowerCase()}`}>
-            {booking.payment_status}
+          <div className="status-badges">
+            <div className={`status-badge ${booking.payment_status.toLowerCase()}`}>
+              {booking.payment_status}
+            </div>
+            <div className={`status-badge ${booking.status.toLowerCase()}`}>
+              {booking.status}
+            </div>
           </div>
-          <div className="amount-info">
-            <span>Total Amount: ₹{booking.total_amount}</span>
+          <div className="payment-summary">
+            <div className="amount-info">
+              <span className="amount-label">Total Amount:</span>
+              <span className="amount-value">₹{booking.total_amount}</span>
+            </div>
+            <div className="amount-info">
+              <span className="amount-label">Amount Paid:</span>
+              <span className="amount-value positive">₹{booking.amount_paid}</span>
+            </div>
+            {booking.amount_due > 0 && (
+              <div className="amount-info">
+                <span className="amount-label">Amount Due:</span>
+                <span className="amount-value negative">₹{booking.amount_due}</span>
+              </div>
+            )}
+            {booking.refund_amount > 0 && (
+              <div className="amount-info">
+                <span className="amount-label">Amount Refunded:</span>
+                <span className="amount-value refunded">₹{booking.refund_amount}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -130,15 +154,43 @@ console.log("bookingId:",bookingId);
                     <span className="label">Type</span>
                     <span className="value">{room.room_type.replace(/_/g, ' ')}</span>
                   </div>
-                  <div className="detail-row">
-                    <span className="label">Price/Night</span>
+                  {/* <div className="detail-row">
+                    <span className="label">Base Price/Night</span>
                     <span className="value">₹{room.price_per_night}</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ))}
           </div>
         </section>
+
+        {/* Nightly Rates */}
+        {booking.nightly_rates && booking.nightly_rates.length > 0 && (
+          <section className="detail-section">
+            <h3>Nightly Rates</h3>
+            <div className="nightly-rates-grid">
+              {booking.nightly_rates.map((rate, index) => (
+                <div key={index} className="rate-card">
+                  <div className="night-header">Night {rate.night}</div>
+                  <div className="rate-details">
+                    <div className="detail-row">
+                      <span className="label">Rate</span>
+                      <span className="value">₹{rate.rate}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Date</span>
+                      <span className="value">
+                        {formatDate(new Date(booking.check_in_date).setDate(
+                          new Date(booking.check_in_date).getDate() + rate.night - 1
+                        ))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Guest Details */}
         <section className="detail-section">

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#F3F4F6"/>
+  <!-- Plate -->
+  <circle cx="200" cy="150" r="80" fill="#9CA3AF"/>
+  <circle cx="200" cy="150" r="70" fill="#F3F4F6"/>
+  
+  <!-- Fork and Spoon -->
+  <rect x="160" y="100" width="4" height="60" rx="2" fill="#9CA3AF"/>
+  <rect x="236" y="100" width="4" height="60" rx="2" fill="#9CA3AF"/>
+  <path d="M160 140H164V160C164 162.209 162.209 164 160 164V140Z" fill="#9CA3AF"/>
+  <circle cx="238" cy="160" r="8" fill="#9CA3AF"/>
+  
+  <!-- Text -->
+  <text x="200" y="220" text-anchor="middle" font-family="Arial" font-size="16" fill="#6B7280">Image Not Available</text>
+  <text x="200" y="240" text-anchor="middle" font-family="Arial" font-size="14" fill="#9CA3AF">Delicious Indian Cuisine</text>
+</svg>

@@ -7,15 +7,44 @@
 .page-container {
   position: relative;
   flex-grow: 1;
-  margin-left: 260px;
   transition: all 0.3s ease;
   background: #f9fafb;
   padding: 2rem;
   min-height: 100vh;
-  width: calc(100% - 260px);
 }
 
-.layout.sidebar-collapsed .page-container {
-  margin-left: 80px;
-  width: calc(100% - 80px);
+/* Desktop styles */
+@media (min-width: 1025px) {
+  .page-container {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+  }
+
+  .layout.sidebar-collapsed .page-container {
+    margin-left: 80px;
+    width: calc(100% - 80px);
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .page-container {
+    margin-left: 200px;
+    width: calc(100% - 200px);
+  }
+
+  .layout.sidebar-collapsed .page-container {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .page-container {
+    margin-left: 0;
+    width: 100%;
+    padding: 1rem;
+    padding-top: calc(60px + 1rem); /* Navbar height + padding */
+  }
 }

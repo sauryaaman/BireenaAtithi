@@ -11,6 +11,7 @@ const {
     getBookingForBill,
     downloadInvoice,
     getInvoiceDetails,
+    addPayment,
 } = require('../controllers/bookingController');
 const {
     updateBooking,
@@ -33,9 +34,11 @@ router.put('/:booking_id/checkout', verifyBookingAccess, checkoutBooking);
 router.put('/:booking_id/cancel', verifyBookingAccess, cancelBooking);  // New cancel endpoint
 router.put('/:booking_id/checkout', verifyBookingAccess, checkoutBooking);
 router.put('/:booking_id/payment', verifyBookingAccess, updatePaymentStatus);
+router.post('/:booking_id/payment', verifyBookingAccess, addPayment);
 router.get('/:booking_id/bill', verifyBookingAccess, getBookingForBill);
 router.get('/:booking_id/invoice/download', verifyBookingAccess, downloadInvoice);
 router.get('/:booking_id/details', verifyBookingAccess, getBookingDetails);
+
 
 // New routes for booking updates
 router.put('/:booking_id',verifyBookingAccess, updateBooking);

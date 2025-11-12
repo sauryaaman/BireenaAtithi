@@ -74,8 +74,9 @@ async function validateRoomAvailability(roomIds, checkin_date, checkout_date) {
 // Create a new booking
 async function createBooking(req, res) {
     try {
-        // console.log('========= CREATE BOOKING START =========');
-        // console.log('Request body:', req.body);
+        console.log('========= CREATE BOOKING START =========');
+        console.log('Request body:', JSON.stringify(req.body, null, 2));
+        console.log('Nightly rates received:', req.body.nightly_rates);
         
         const {
             primary_guest,
@@ -169,6 +170,20 @@ async function createBooking(req, res) {
                 // console.log('Created new customer with ID:', customerId);
 
                 // Create main booking record
+                // Process nightly rates - ensure it's a proper JSONB array
+                let processedNightlyRates = null;
+                if (req.body.nightly_rates) {
+                    // If it's a string, parse it first
+                    const ratesData = typeof req.body.nightly_rates === 'string' 
+                        ? JSON.parse(req.body.nightly_rates) 
+                        : req.body.nightly_rates;
+                    
+                    // Ensure it's an array of objects with night and rate
+                    if (Array.isArray(ratesData)) {
+                        processedNightlyRates = ratesData;
+                    }
+                }
+
                 const bookingData = {
                     cust_id: customerId,
                     room_id: selected_rooms[0].room_id, // Primary room for backward compatibility
@@ -176,14 +191,19 @@ async function createBooking(req, res) {
                     checkout_date,
                     nights,
                     total_amount,
+                    amount_paid: req.body.amount_paid || 0,
                     payment_status: payment_status?.toUpperCase() || PAYMENT_STATUS.UNPAID,
                     status: initialBookingStatus,
-                    checkin_time: initialBookingStatus === BOOKING_STATUS.CHECKED_IN ? new Date().toISOString() : null
+                    checkin_time: initialBookingStatus === BOOKING_STATUS.CHECKED_IN ? new Date().toISOString() : null,
+                    nightly_rates: processedNightlyRates, // This will be stored as JSONB in PostgreSQL
+                    last_payment_date: req.body.amount_paid > 0 ? new Date().toISOString() : null
                 };
 
                 // console.log('Creating booking with data:', bookingData);
 
                 try {
+                    console.log('Attempting to create booking in Supabase with data:', JSON.stringify(bookingData, null, 2));
+                    
                     const { data: booking, error } = await supabase
                         .from('bookings')
                         .insert([bookingData])
@@ -191,16 +211,52 @@ async function createBooking(req, res) {
                         .single();
 
                     if (error) {
-                        // console.error('Error creating booking:', error);
+                        console.error('Supabase Error:', error);
+                        console.error('Error details:', {
+                            code: error.code,
+                            message: error.message,
+                            details: error.details,
+                            hint: error.hint
+                        });
                         throw new Error(`Failed to create booking: ${error.message}`);
                     }
 
                     if (!booking) {
+                        console.error('No booking data returned from Supabase insert');
                         throw new Error('Booking creation failed - no data returned');
                     }
 
-                    // console.log('Booking created successfully:', booking);
+                    console.log('Supabase Insert Response:', JSON.stringify(booking, null, 2));
+                    console.log('Created Booking Details:', {
+                        booking_id: booking.booking_id,
+                        cust_id: booking.cust_id,
+                        room_id: booking.room_id,
+                        checkin_date: booking.checkin_date,
+                        checkout_date: booking.checkout_date,
+                        status: booking.status,
+                        nightly_rates: booking.nightly_rates
+                    });
                     createdBooking = booking; // Save to outer scope variable
+
+                    // Create payment transaction if amount_paid > 0
+                    if (req.body.amount_paid > 0) {
+                        const paymentData = {
+                            booking_id: booking.booking_id,
+                            user_id: req.user.user_id, // Assuming user is attached to req by auth middleware
+                            amount_paid: req.body.amount_paid,
+                            payment_mode: req.body.payment_mode || 'Cash',
+                            is_refund: false
+                        };
+
+                        const { error: paymentError } = await supabase
+                            .from('payment_transactions')
+                            .insert([paymentData]);
+
+                        if (paymentError) {
+                            console.error('Payment transaction creation failed:', paymentError);
+                            // Don't throw error here, as booking is already created
+                        }
+                    }
                 } catch (error) {
                     // console.error('Error in booking creation:', error);
                     throw new Error(`Failed to create booking: ${error.message}`);
@@ -208,13 +264,16 @@ async function createBooking(req, res) {
 
                 // Store all selected rooms in booking_rooms and update their status
                 // Prepare booking rooms data using createdBooking
+                // Prepare booking rooms data with nightly rates information
                 const bookingRooms = selected_rooms.map(room => ({
                     booking_id: createdBooking.booking_id,
                     room_id: room.room_id,
-                    price_per_night: room.price_per_night
+                    price_per_night: room.price_per_night,
+                    uses_nightly_rates: room.uses_nightly_rates || false,
+                    nightly_rates: room.uses_nightly_rates ? room.nightly_rates : null
                 }));
 
-                // console.log('Creating booking rooms entries:', bookingRooms);
+                console.log('Creating booking rooms entries with rate info:', JSON.stringify(bookingRooms, null, 2));
 
                 const { data: createdBookingRooms, error: bookingRoomsError } = await supabase
                     .from('booking_rooms')
@@ -300,12 +359,21 @@ async function createBooking(req, res) {
                 }
             }
 
-            // Send successful response
-            res.status(201).json({
+            // Prepare response data
+            const responseData = {
                 message: 'Booking created successfully',
                 booking_id: createdBooking.booking_id,
-                status: initialBookingStatus
-            });
+                status: initialBookingStatus,
+                checkin_date: createdBooking.checkin_date,
+                checkout_date: createdBooking.checkout_date,
+                nightly_rates: createdBooking.nightly_rates,
+                total_amount: createdBooking.total_amount
+            };
+
+            console.log('Final booking details in Supabase:', JSON.stringify(responseData, null, 2));
+            
+            // Send successful response
+            res.status(201).json(responseData);
 
         } catch (error) {
             // console.error('Error in createBooking:', error);
@@ -493,6 +561,7 @@ async function checkoutBooking(req, res) {
 
 async function getBookings(req, res) {
     try {
+        const moment = require('moment-timezone');
         // console.log('Fetching bookings...');
         const user_id = req.user.user_id;
 
@@ -590,6 +659,16 @@ async function getBookings(req, res) {
                 cust_id: booking.customer.cust_id
             } : null;
 
+            // Parse nightly rates if present
+            let nightly_rates = null;
+            if (booking.nightly_rates) {
+                try {
+                    nightly_rates = JSON.parse(booking.nightly_rates);
+                } catch (e) {
+                    nightly_rates = null;
+                }
+            }
+
             return {
                 booking_id: booking.booking_id,
                 customer: customerData,
@@ -600,8 +679,13 @@ async function getBookings(req, res) {
                 checkout_date: booking.checkout_date,
                 nights: booking.nights,
                 total_amount: booking.total_amount,
+                amount_paid: booking.amount_paid,
+                amount_due: booking.amount_due,
                 payment_status: booking.payment_status,
-                status: booking.status
+                status: booking.status,
+                nightly_rates: nightly_rates,
+                refunded_at: booking.refunded_at ? moment.tz(booking.refunded_at, 'UTC').tz('Asia/Kolkata').format() : null,
+                refund_amount: booking.refund_amount
             };
         });
 
@@ -683,8 +767,12 @@ async function getBookingForBill(req, res) {
             booking.additional_guests = booking.booking_guests.filter(g => !g.is_primary);
             booking.rooms = booking.booking_rooms.map(br => ({
                 ...br.rooms,
-                price_per_night: br.price_per_night
+                price_per_night: br.price_per_night,
+                uses_nightly_rates: br.uses_nightly_rates || false,
+                nightly_rates: br.uses_nightly_rates ? br.nightly_rates : null
             }));
+            
+            // Nightly rates are already in JSONB format from PostgreSQL, no need to parse
         }
 
         res.json(booking);
@@ -875,6 +963,8 @@ async function getInvoiceDetails(req, res) {
                 checkout_time: booking.checkout_time,
                 total_nights: booking.nights,
                 total_amount: booking.total_amount,
+                amount_paid: booking.amount_paid,
+                amount_due: booking.amount_due,
                 payment_status: booking.payment_status,
                 rooms: booking.booking_rooms.map(br => ({
                     room_number: br.rooms.room_number,
@@ -912,6 +1002,77 @@ async function getInvoiceDetails(req, res) {
     }
 }
 
+// Add new payment for a booking
+async function addPayment(req, res) {
+    try {
+        const { booking_id } = req.params;
+        const { amount_paid, payment_mode } = req.body;
+    console.log('Adding payment:', { booking_id, amount_paid, payment_mode });
+        // Get current booking details
+        const { data: booking, error: bookingError } = await supabase
+            .from('bookings')
+            .select('*')
+            .eq('booking_id', booking_id)
+            .single();
+
+        if (bookingError) throw bookingError;
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // Calculate new amount paid and due
+        const newAmountPaid = (booking.amount_paid || 0) + parseFloat(amount_paid);
+        const newAmountDue = booking.total_amount - newAmountPaid;
+
+        // Determine new payment status
+        let newPaymentStatus;
+        if (newAmountDue === 0) {
+            newPaymentStatus = PAYMENT_STATUS.PAID;
+        } else if (newAmountPaid > 0) {
+            newPaymentStatus = PAYMENT_STATUS.PARTIAL;
+        } else {
+            newPaymentStatus = PAYMENT_STATUS.UNPAID;
+        }
+
+        // Start a Supabase transaction
+        // Update booking payment details
+        const { error: updateError } = await supabase
+            .from('bookings')
+            .update({ 
+                amount_paid: newAmountPaid,
+                //amount_due: newAmountDue,
+                payment_status: newPaymentStatus,
+                last_payment_date: new Date().toISOString()
+            })
+            .eq('booking_id', booking_id);
+
+        if (updateError) throw updateError;
+
+        // Create payment transaction record
+        const { error: transactionError } = await supabase
+            .from('payment_transactions')
+            .insert([{
+                booking_id: booking_id,
+                amount_paid: amount_paid,
+                payment_mode: payment_mode,
+                user_id: req.user.user_id,
+                is_refund: false
+            }]);
+
+        if (transactionError) throw transactionError;
+        console.log('Payment added successfully:', { booking_id, newAmountPaid, newAmountDue, newPaymentStatus,last_payment_date: new Date().toLocaleDateString() });
+        res.json({
+            message: 'Payment added successfully',
+            new_amount_paid: newAmountPaid,
+            new_amount_due: newAmountDue,
+            payment_status: newPaymentStatus
+        });
+    } catch (error) {
+        console.error('Error in addPayment:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 // Export all controller functions
 module.exports = {
     createBooking,
@@ -921,5 +1082,6 @@ module.exports = {
     updatePaymentStatus,
     getBookingForBill,
     downloadInvoice,
-    getInvoiceDetails
+    getInvoiceDetails,
+    addPayment
 }; // End of exports

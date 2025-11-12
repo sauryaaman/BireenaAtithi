@@ -17,14 +17,70 @@
   margin: 0;
 }
 
-.remove-room-btn {
-  padding: 6px 12px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9em;
+/* Button base styles */
+button.book-btn,
+button.checkin-btn,
+button.remove-room-btn,
+button.check-availability-btn {
+    font-weight: 600 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    padding: 10px 20px !important;
+    transition: all 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-transform: none !important;
+    min-width: 120px !important;
+    min-height: 40px !important;
+    line-height: 1.5 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+/* Book button */
+button.book-btn {
+    background-color: #2196F3 !important;
+    color: black !important;
+    border: 1px solid #1E88E5 !important;
+}
+
+button.book-btn:hover,
+button.book-btn:focus {
+    background-color: #1E88E5 !important;
+    color: black !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+/* Check-in button */
+button.checkin-btn {
+    background-color: #4CAF50 !important;
+    color: black !important;
+    border: 1px solid #43A047 !important;
+}
+
+button.checkin-btn:hover,
+button.checkin-btn:focus {
+    background-color: #43A047 !important;
+    color: black !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+/* Remove room button */
+button.remove-room-btn {
+    background-color: #dc3545 !important;
+    color: black !important;
+    border: 1px solid #c82333 !important;
+    min-width: auto !important;
+    padding: 8px 16px !important;
+}
+
+button.remove-room-btn:hover,
+button.remove-room-btn:focus {
+    background-color: #c82333 !important;
+    color: black !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
 
 .remove-room-btn:hover {
@@ -42,6 +98,83 @@
   font-weight: bold;
   color: #28a745;
   margin-top: 10px;
+}
+
+.add-nightly-rates-btn {
+  background-color: #4CAF50 !important;
+  color: white !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  border-radius: 4px !important;
+  margin-top: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+}
+
+.add-nightly-rates-btn:hover {
+  background-color: #43A047 !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.room-nightly-prices {
+  margin: 1rem 0;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  grid-column: 1 / -1;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.nightly-rates-info {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.night-price-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.price-input {
+  width: 120px;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 0.25rem;
+}
+
+.room-total-details {
+  margin-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.nightly-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.night-summary {
+  display: flex;
+  justify-content: space-between;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.room-total {
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #2563eb;
+  text-align: right;
+  font-size: 1.1rem;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 0.5rem;
 }
 
 .booking-summary {
@@ -108,17 +241,24 @@
   height: 100%;
 }
 
-.check-availability-btn {
-  padding: 8px 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+/* Check availability button */
+button.check-availability-btn {
+    background-color: #007bff !important;
+    color: black !important;
+    border: 1px solid #0056b3 !important;
+    padding: 8px 16px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    min-width: 120px !important;
+    min-height: 40px !important;
 }
 
-.check-availability-btn:hover {
-  background-color: #0056b3;
+button.check-availability-btn:hover,
+button.check-availability-btn:focus {
+    background-color: #0056b3 !important;
+    color: black !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
 
 .no-rooms-message {

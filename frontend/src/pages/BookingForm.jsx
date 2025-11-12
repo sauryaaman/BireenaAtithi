@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { RiCalendarLine, RiHotelBedLine, RiUserLine, RiPhoneLine, RiMailLine, RiMapPinLine } from 'react-icons/ri';
 import "react-datepicker/dist/react-datepicker.css";
 import '../components/Booking/BookingForm.css';
+// import './BookingForm.css';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 const BookingForm = () => {
@@ -21,6 +22,8 @@ const BookingForm = () => {
 
   const [bookingType, setBookingType] = useState('book');
   
+  const [nightlyPrices, setNightlyPrices] = useState({});
+
   // ID proof type options
   const idProofTypes = [
     { value: 'AADHAR', label: 'Aadhar Card' },
@@ -38,6 +41,8 @@ const BookingForm = () => {
     numberOfGuests: 1,
     totalAmount: 0,
     paymentStatus: 'UNPAID', // Initialize payment status
+    amountPaid: 0, // Initialize amount paid
+    paymentMode: 'Cash', // Default payment mode
     
     // Guest Details
     customerName: '',
@@ -57,7 +62,7 @@ const BookingForm = () => {
     pin: '',
     
     // Room Selections
-    roomSelections: Array(1).fill({ roomType: '', roomId: '', price_per_night: 0 })
+    roomSelections: Array(1).fill({ roomType: '', roomId: '', price_per_night: 0, })
   });
   
   // Additional guests data structure
@@ -183,12 +188,16 @@ const BookingForm = () => {
           total_price: response.data.pricing.totalPrice,
           nights: response.data.pricing.numberOfNights
         };
+        console.log('Updated room selection with pricing:', newSelections[roomIndex]);
       }
       
       setFormData(prev => ({
         ...prev,
         roomSelections: newSelections
+        
       }));
+      console.log('Updated form data with room selections:', formData.roomSelections);
+       
     } catch (err) {
       console.error('Error searching rooms:', err);
       if (err.response?.data?.message) {
@@ -207,6 +216,7 @@ const BookingForm = () => {
       setSearchingRooms(false);
     }
   };
+ 
 
   // Function to check if date is today
   const isToday = (date) => {
@@ -372,24 +382,73 @@ const BookingForm = () => {
           sum + (room.total_price || 0), 0
         );
 
+        // Process room rates information
+        const roomRatesInfo = validRooms.map(room => {
+          const roomNights = room.nights || 0;
+          const rates = room.showNightlyRates 
+            ? Array.from({ length: roomNights }).map((_, index) => ({
+                night: index + 1,
+                rate: nightlyPrices[`${room.roomId}-${index}`] || room.price_per_night
+              }))
+            : null;
+          
+          return {
+            room_id: room.roomId,
+            uses_nightly_rates: !!room.showNightlyRates,
+            nightly_rates: rates
+          };
+        });
+
+        // Calculate nightly rates array for backward compatibility
+        const hasNightlyRates = validRooms.some(room => room.showNightlyRates);
+        const nightlyRates = hasNightlyRates ? validRooms.flatMap(room => {
+          const nights = room.nights || 0;
+          return Array.from({ length: nights }).map((_, index) => ({
+            night: index + 1,
+            rate: nightlyPrices[`${room.roomId}-${index}`] || room.price_per_night,
+            room_id: room.roomId // Add room_id to track which rate belongs to which room
+          }));
+        }) : null;
+
+        // Log nightly rates calculation
+        console.log('Night by night rates:', nightlyRates);
+        console.log('Valid rooms with nightly rates:', validRooms.map(room => ({
+          roomId: room.roomId,
+          showNightlyRates: room.showNightlyRates,
+          nights: room.nights,
+          prices: Object.keys(nightlyPrices)
+            .filter(key => key.startsWith(room.roomId))
+            .map(key => ({ night: key.split('-')[1], price: nightlyPrices[key] }))
+        })));
+
         const bookingData = {
           primary_guest: primaryGuest,
           total_amount: totalAmount,
           additional_guests: validGuests,
-          selected_rooms: validRooms.map(selection => ({
+          selected_rooms: validRooms.map((selection, index) => ({
             room_id: selection.roomId,
             room_type: selection.roomType,
             price_per_night: selection.price_per_night,
-            total_price: selection.total_price
+            total_price: selection.total_price,
+            uses_nightly_rates: !!selection.showNightlyRates,
+            nightly_rates: roomRatesInfo[index].nightly_rates
           })),
           checkin_date: format(formData.checkInDate, 'yyyy-MM-dd'),
           checkout_date: format(formData.checkOutDate, 'yyyy-MM-dd'),
           number_of_guests: formData.numberOfGuests,
           payment_status: formData.paymentStatus?.toUpperCase() || 'UNPAID',
-          is_immediate_checkin: type === 'checkin'
+          amount_paid: formData.amountPaid || 0,
+          payment_mode: formData.paymentMode || 'Cash',
+          is_immediate_checkin: type === 'checkin',
+          nightly_rates: nightlyRates // For backward compatibility
         };
 
-        // console.log('Sending booking data:', bookingData);
+        console.log('Sending booking data to backend:', JSON.stringify(bookingData, null, 2));
+
+        console.log('Making API request to create booking...', {
+          url: `${BASE_URL}/api/bookings`,
+          headers: { Authorization: 'Bearer [REDACTED]' }
+        });
 
         // Single API call for both booking types
         const response = await axios.post(
@@ -398,9 +457,17 @@ const BookingForm = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // console.log('Booking response:', response.data);
+        console.log('Backend response full:', response);
+        console.log('Backend response data:', JSON.stringify(response.data, null, 2));
+
+        // Validate response data
+        if (!response.data) {
+          console.error('No data received in response');
+          throw new Error('No response data received from server');
+        }
 
         if (!response.data.booking_id) {
+          console.error('No booking_id in response data:', response.data);
           throw new Error('No booking ID received from server');
         }
 
@@ -639,6 +706,7 @@ const BookingForm = () => {
                                 ...formData.roomSelections[index],
                                 roomId: e.target.value,
                                 price_per_night: selectedRoom ? selectedRoom.price_per_night : 0
+                               
                               };
                               setFormData(prev => ({
                                 ...prev,
@@ -657,8 +725,27 @@ const BookingForm = () => {
                           {formData.roomSelections[index]?.roomId && (
                             <div className="selected-room-price">
                               <p>Room Rate: ₹{formData.roomSelections[index].price_per_night} per night</p>
+                                
+                              
                               <p>Stay Duration: {formData.roomSelections[index].nights} nights</p>
                               <p className="room-total">Room Total: ₹{formData.roomSelections[index].total_price}</p>
+                              <button
+                                type="button"
+                                className="add-nightly-rates-btn"
+                                onClick={() => {
+                                  const newSelections = [...formData.roomSelections];
+                                  newSelections[index] = {
+                                    ...newSelections[index],
+                                    showNightlyRates: !newSelections[index].showNightlyRates
+                                  };
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    roomSelections: newSelections
+                                  }));
+                                }}
+                              >
+                                {formData.roomSelections[index].showNightlyRates ? 'Use Default Rate' : 'Add Nightly Rates Manually'}
+                              </button>
                             </div>
                           )}
                         </div>
@@ -681,15 +768,60 @@ const BookingForm = () => {
                   </div>
                 )}
 
-                {formData.roomSelections[index]?.roomId && availableRooms[index] && (
-                  <div className="selected-room-price">
-                    Selected Room Price: ₹{availableRooms[index].find(r => r.room_id === formData.roomSelections[index].roomId)?.price_per_night} per night
-                  </div>
-                )}
-                
-                {formData.roomSelections[index]?.roomId && availableRooms[index] && (
-                  <div className="room-price">
-                    Price per night: ₹{availableRooms[index].find(r => r._id === formData.roomSelections[index].roomId)?.price_per_night}
+                {formData.roomSelections[index]?.roomId && 
+                  formData.roomSelections[index]?.showNightlyRates && 
+                  availableRooms[index] && (
+                    <div className="room-nightly-prices">
+                      <h4>Room {availableRooms[index].find(r => r.room_id === formData.roomSelections[index].roomId)?.room_number} - Nightly Rates</h4>
+                      <p className="nightly-rates-info">Enter rate for each night. Leave empty to use default rate.</p>
+                      {Array.from({ length: formData.roomSelections[index].nights || 0 }).map((_, nightIndex) => (
+                        <div key={nightIndex} className="night-price-row">
+                          <label>Night {nightIndex + 1} Price:</label>
+                          <input
+                            type="number"
+                            value={
+                              nightlyPrices[`${formData.roomSelections[index].roomId}-${nightIndex}`] || 
+                              formData.roomSelections[index].price_per_night || 0
+                            }
+                            onChange={(e) => {
+                              const newPrice = parseFloat(e.target.value) || 0;
+                            
+                            // Update nightly price for this room and night
+                            setNightlyPrices(prev => ({
+                              ...prev,
+                              [`${formData.roomSelections[index].roomId}-${nightIndex}`]: newPrice
+                            }));
+
+                            // Calculate new total for this room
+                            const roomNights = Array.from({ length: formData.roomSelections[index].nights });
+                            const roomTotal = roomNights.reduce((sum, _, night) => {
+                              const price = night === nightIndex ? newPrice : 
+                                nightlyPrices[`${formData.roomSelections[index].roomId}-${night}`] || 
+                                formData.roomSelections[index].price_per_night;
+                              return sum + price;
+                            }, 0);
+
+                            // Update room selection with new total
+                            const newSelections = [...formData.roomSelections];
+                            newSelections[index] = {
+                              ...newSelections[index],
+                              total_price: roomTotal
+                            };
+
+                            setFormData(prev => ({
+                              ...prev,
+                              roomSelections: newSelections,
+                              totalAmount: newSelections.reduce((sum, sel) => sum + (sel.total_price || 0), 0)
+                            }));
+                          }}
+                          min="0"
+                          className="price-input"
+                        />
+                      </div>
+                    ))}
+                    <div className="room-total">
+                      Room Total: ₹{formData.roomSelections[index].total_price || 0}
+                    </div>
                   </div>
                 )}
               </div>
@@ -959,9 +1091,13 @@ const BookingForm = () => {
                 name="paymentStatus"
                 value={formData.paymentStatus}
                 onChange={(e) => {
+                  const newStatus = e.target.value.toUpperCase();
                   setFormData(prev => ({
                     ...prev,
-                    paymentStatus: e.target.value.toUpperCase()
+                    paymentStatus: newStatus,
+                    amountPaid: newStatus === 'PAID' ? prev.totalAmount : 
+                              (newStatus === 'UNPAID' ? 0 : prev.amountPaid || 0),
+                    paymentMode: prev.paymentMode || 'Cash'
                   }));
                 }}
                 required
@@ -973,6 +1109,83 @@ const BookingForm = () => {
                 <option value="PAID">Paid</option>
               </select>
             </div>
+
+            {formData.paymentStatus !== 'UNPAID' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="amountPaid">Amount Paid *</label>
+                  <input
+                    type="number"
+                    id="amountPaid"
+                    name="amountPaid"
+                    value={formData.amountPaid || ''}
+                    onChange={(e) => {
+                      const amount = parseFloat(e.target.value) || 0;
+                      const total = formData.totalAmount;
+                      
+                      // Validate amount
+                      if (amount > total) {
+                        setError('Payment amount cannot exceed total amount');
+                        return;
+                      }
+                      
+                      // Update payment status based on amount
+                      let status = 'PARTIAL';
+                      if (amount >= total) {
+                        status = 'PAID';
+                      } else if (amount <= 0) {
+                        status = 'UNPAID';
+                      }
+                      
+                      setFormData(prev => ({
+                        ...prev,
+                        amountPaid: amount,
+                        paymentStatus: status
+                      }));
+                      setError('');
+                    }}
+                    min="0"
+                    max={formData.totalAmount}
+                    required
+                    className="form-control"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="paymentMode">Payment Mode *</label>
+                  <select
+                    id="paymentMode"
+                    name="paymentMode"
+                    value={formData.paymentMode || 'Cash'}
+                    onChange={(e) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        paymentMode: e.target.value
+                      }));
+                    }}
+                    required
+                    className="form-control"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="amountDue">Amount Due</label>
+                  <input
+                    type="text"
+                    id="amountDue"
+                    value={(formData.totalAmount - (formData.amountPaid || 0)).toFixed(2)}
+                    disabled
+                    className="form-control"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {formData.roomSelections.some(selection => selection.roomId) && (

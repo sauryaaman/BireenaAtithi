@@ -133,7 +133,7 @@ const EditBooking = () => {
             const bookingData = response.data.booking;
             const customerData = response.data.customer;
             const guestsData = response.data.guests;
-            // console.log("booingData", bookingData);
+             console.log("bookingData", bookingData);
             // console.log("statusbooking", bookingData.status);
             // console.log("customerData", customerData);
             // console.log("guestsData", guestsData);
@@ -382,16 +382,17 @@ const EditBooking = () => {
             (formData.checkOutDate - formData.checkInDate) / (1000 * 60 * 60 * 24)
         ));
         
-        let roomsTotal = 0;
+        // Start with existing booking total amount
+        let totalAmount = formData.totalAmount || 0;
+        
+        // Only calculate for new rooms (non-existing rooms)
         formData.roomSelections.forEach(room => {
-            if (room.price_per_night) {
-                roomsTotal += parseFloat(room.price_per_night) || 0;
+            if (!room.isExistingRoom && room.price_per_night) {
+                totalAmount += (parseFloat(room.price_per_night) || 0) * nights;
             }
         });
 
-        const totalAmount = roomsTotal * nights;
-        // console.log('Calculating total:', { roomsTotal, nights, totalAmount });
-
+        // Update form data with new total
         setFormData(prev => ({
             ...prev,
             totalAmount: totalAmount

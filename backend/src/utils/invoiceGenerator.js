@@ -68,14 +68,16 @@ handlebars.registerHelper('formatCurrency', function(amount) {
     }).format(amount || 0);
 });
 
-// Function to calculate GST
-function calculateGST(amount) {
-    const baseAmount = amount / 1.05; // Remove 5% GST
-    const gstAmount = amount - baseAmount;
+// Function to calculate split GST amounts from total
+function calculateGST(totalAmount) {
+    const baseAmount = totalAmount / 1.05; // Remove 5% GST
+    const totalGstAmount = totalAmount - baseAmount;
+    const cgstAmount = totalGstAmount / 2; // Split GST into CGST (2.5%)
+    const sgstAmount = totalGstAmount / 2; // and SGST (2.5%)
     return {
         baseAmount: baseAmount.toFixed(2),
-        gstAmount: gstAmount.toFixed(2),
-        totalAmount: amount.toFixed(2)
+        cgstAmount: cgstAmount.toFixed(2),
+        sgstAmount: sgstAmount.toFixed(2)
     };
 }
 
@@ -96,29 +98,18 @@ async function generateInvoicePDF(invoiceData) {
         const templateHtml = fs.readFileSync(templatePath, 'utf-8');
         // console.log('Template HTML length:', templateHtml.length);
 
-        // Calculate GST for each room and total
-        let totalAmount = 0;
-        invoiceData.booking.rooms = invoiceData.booking.rooms.map(room => {
-            const amount = room.price_per_night * invoiceData.booking.total_nights;
-            totalAmount += amount;
-            return {
-                ...room,
-                amount: amount
-            };
-        });
-
-        // Calculate final amounts with GST
-        const { baseAmount, gstAmount } = calculateGST(totalAmount);
-        // console.log('Calculated amounts:', { baseAmount, gstAmount, totalAmount });
-
-        // Compile template with data
+        // Calculate split GST amounts from booking total amount
+        const totalAmount = parseFloat(invoiceData.booking.total_amount);
+        const { baseAmount, cgstAmount, sgstAmount } = calculateGST(totalAmount);
+        
+        // Compile template with data - using amounts from booking table
         const template = handlebars.compile(templateHtml);
         const finalHtml = template({
             ...invoiceData,
             calculatedAmounts: {
                 baseAmount,
-                gstAmount,
-                totalAmount
+                cgstAmount,
+                sgstAmount
             }
         });
 
@@ -156,19 +147,20 @@ async function generateInvoicePDF(invoiceData) {
 
         // console.log('Page content set, generating PDF...');
 
-        // Generate PDF with proper settings
+        // Generate PDF with compact settings
         const pdf = await page.pdf({
             format: 'A4',
             margin: {
-                top: '20px',
-                right: '20px',
-                bottom: '20px',
-                left: '20px'
+                top: '15px',
+                right: '15px',
+                bottom: '15px',
+                left: '15px'
             },
             printBackground: true,
             preferCSSPageSize: true,
             timeout: 60000, // 60 second timeout
-            displayHeaderFooter: false
+            displayHeaderFooter: false,
+            scale: 0.95 // Slightly scale down content to fit better
         });
 
         // console.log('PDF generated successfully, size:', pdf.length);

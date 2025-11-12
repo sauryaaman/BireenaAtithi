@@ -77,8 +77,13 @@ const getBookingDetails = async (req, res) =>{
                 checkout_time: booking.checkout_time,
                 total_nights: booking.nights,
                 total_amount: booking.total_amount,
+                amount_paid:booking.amount_paid,
+                amount_due:booking.amount_due,
+                refund_amount:booking.refund_amount,
                 payment_status: booking.payment_status,
                 status: booking.status,
+                nightly_rates: booking.nightly_rates,
+                
                 rooms: booking.booking_rooms.map(br => ({
                     room_id:br.rooms.room_id,
                     room_number: br.rooms.room_number,
@@ -112,6 +117,7 @@ const getBookingDetails = async (req, res) =>{
         };
 
         res.json(Data);
+        console.log(Data);
     } catch (error) {
         // console.error('Error fetching invoice details:', error);
         res.status(500).json({ error: 'Failed to fetch invoice details' });
