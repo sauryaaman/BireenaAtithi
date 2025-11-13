@@ -117,8 +117,10 @@ const CashierReport = () => {
 
         // Create CSV rows
         const rows = transactionsData.map(transaction => {
-            const booking = transaction.bookings;
-            const localTime = new Date(transaction.payment_date);
+            const booking = transaction.bookings || {};
+            // Prefer created_at_ist, fallback to payment_date
+            const dateString = transaction.created_at_ist || transaction.payment_date || transaction.created_at;
+            const localTime = dateString ? new Date(dateString) : new Date();
             return [
                 transaction.transaction_id,
                 format(localTime, 'dd/MM/yyyy hh:mm a'),
@@ -126,10 +128,10 @@ const CashierReport = () => {
                 transaction.is_refund ? 'Refund' : 'Payment',
                 transaction.amount_paid,
                 transaction.payment_mode,
-                booking.status,
-                booking.payment_status,
-                booking.total_amount,
-                booking.amount_paid,
+                booking.status || '',
+                booking.payment_status || '',
+                booking.total_amount || '',
+                booking.amount_paid || '',
                 booking.amount_due || 0,
                 booking.refund_amount || 0
             ];
@@ -146,7 +148,7 @@ const CashierReport = () => {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `transactions-${format(singleDate, 'dd-MM-yyyy')}.csv`);
+        link.setAttribute('download', `transactions-${format(startDate, 'dd-MM-yyyy')}-to-${format(endDate, 'dd-MM-yyyy')}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -387,19 +389,22 @@ const fetchTrends = async () => {
 
 
 
-    // Fetch transactions data
+    // Fetch transactions data (accepts start_date & end_date range)
     const fetchTransactions = async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
             const response = await axios.get(`${BASE_URL}/api/cashier/daily-transactions`, {
                 params: {
-                    date: format(singleDate, 'yyyy-MM-dd'),
+                    start_date: format(startDate, 'yyyy-MM-dd'),
+                    end_date: format(endDate, 'yyyy-MM-dd'),
                     timezone: getUserTimezone()
                 },
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setTransactionsData(response.data);
+
+            // The backend returns a flat list of transactions across the date range
+            setTransactionsData(response.data || []);
         } catch (err) {
             setError('Failed to fetch transactions data');
             console.error(err);
@@ -795,12 +800,29 @@ const fetchTrends = async () => {
                     </>
                 ) : (
                     <div className="date-section">
-                        <div className="single-date">
+                        <div className="date-range">
                             <div className="date-picker-container">
-                                <label>Select Date</label>
+                                <label>Start Date</label>
                                 <DatePicker
-                                    selected={singleDate}
-                                    onChange={setSingleDate}
+                                    selected={startDate}
+                                    onChange={setStartDate}
+                                    selectsStart
+                                    startDate={startDate}
+                                    endDate={endDate}
+                                    maxDate={new Date()}
+                                    dateFormat="dd/MM/yyyy"
+                                    className="date-picker"
+                                />
+                            </div>
+                            <div className="date-picker-container">
+                                <label>End Date</label>
+                                <DatePicker
+                                    selected={endDate}
+                                    onChange={setEndDate}
+                                    selectsEnd
+                                    startDate={startDate}
+                                    endDate={endDate}
+                                    minDate={startDate}
                                     maxDate={new Date()}
                                     dateFormat="dd/MM/yyyy"
                                     className="date-picker"

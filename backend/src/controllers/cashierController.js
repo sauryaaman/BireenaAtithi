@@ -211,39 +211,35 @@ const getSummary = async (req, res) => {
 // Get daily transactions
 const getDailyTransactions = async (req, res) => {
     try {
-        const { date } = req.query;
+        // Support either a single `date` or a `start_date` + `end_date` range
+        let { date, start_date, end_date } = req.query;
         const user_id = req.user?.user_id;
         const timezone = 'Asia/Kolkata';
 
-        // Convert IST date to UTC range for querying
-        // For IST day (00:00:00 to 23:59:59), we need:
-        // Previous day 18:30:00 UTC to current day 18:29:59 UTC
-        const startUtc = moment.tz(date, timezone)
-            .startOf('day')                  // Get start of IST day
-            .subtract(5, 'hours')            // Convert to UTC (part 1)
-            .subtract(30, 'minutes')         // Convert to UTC (part 2)
+        // If only `date` provided, use it for both start and end
+        if (!start_date && !end_date && date) {
+            start_date = date;
+            end_date = date;
+        }
+
+        if (!start_date || !end_date) {
+            return res.status(400).json({ error: 'Provide either date or start_date and end_date' });
+        }
+
+        // Convert IST start_date/end_date to UTC range for querying
+        const startUtc = moment.tz(start_date, timezone)
+            .startOf('day')
+            .subtract(5, 'hours')
+            .subtract(30, 'minutes')
             .format();
 
-        const endUtc = moment.tz(date, timezone)
-            .endOf('day')                    // Get end of IST day
-            .subtract(5, 'hours')            // Convert to UTC (part 1)
-            .subtract(30, 'minutes')         // Convert to UTC (part 2)
+        const endUtc = moment.tz(end_date, timezone)
+            .endOf('day')
+            .subtract(5, 'hours')
+            .subtract(30, 'minutes')
             .format();
 
-        console.log('Getting transactions for:', {
-            user_id,
-            date_range: {
-                ist: {
-                    date,
-                    start: moment.tz(date, timezone).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
-                    end: moment.tz(date, timezone).endOf('day').format('YYYY-MM-DD HH:mm:ss')
-                },
-                utc: {
-                    start: startUtc,
-                    end: endUtc
-                }
-            }
-        });
+        console.log('Getting transactions for range:', { user_id, start_date, end_date, startUtc, endUtc });
 
         const { data: transactions, error } = await supabase
             .from('payment_transactions')
@@ -267,7 +263,7 @@ const getDailyTransactions = async (req, res) => {
                     room:rooms(user_id)
                 )
             `)
-            .eq('user_id', user_id) // Filter by logged in user
+            .eq('user_id', user_id)
             .gte('created_at', startUtc)
             .lte('created_at', endUtc)
             .order('created_at', { ascending: false });
@@ -277,7 +273,7 @@ const getDailyTransactions = async (req, res) => {
             throw error;
         }
 
-        console.log('Found transactions:', transactions.length);
+        console.log('Found transactions:', transactions?.length || 0);
 
         // Convert UTC timestamps to IST in the response
         const transactionsWithIST = transactions.map(trans => ({
@@ -291,14 +287,7 @@ const getDailyTransactions = async (req, res) => {
             } : null
         }));
 
-        console.log('Sample transaction conversion:', {
-            first_transaction: transactionsWithIST[0] ? {
-                utc: transactions[0].created_at,
-                ist: transactionsWithIST[0].created_at,
-                ist_formatted: transactionsWithIST[0].created_at_ist
-            } : 'No transactions'
-        });
-
+        // Return flat list of transactions across the date range (converted to IST)
         res.json(transactionsWithIST);
     } catch (error) {
         console.error('Error in getDailyTransactions:', error);

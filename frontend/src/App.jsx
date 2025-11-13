@@ -27,6 +27,8 @@ import {LoginPage} from './pages/auth/login';
 
 
 import { AnimatePresence } from 'framer-motion';
+import 'react-toastify/dist/ReactToastify.css';
+
 
  function AnimatedRoutes() {
   const location = useLocation();

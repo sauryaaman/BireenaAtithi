@@ -4,12 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#d30804',
-        dark: '#000000',
-        secondary: '#d30804',
+        primary: '#00ffff',
+        dark: '#081b29',
+        secondary: '#00cccc',
+         accent: '#00ffff',
+        'cyan-400': '#00ffff',
+        'cyan-600': '#00cccc',
+        'navy': '#081b29',
         gradient: {
-          white: '#ffffff',
-          red: '#d30804',
+          navy: '#081b29',
+          cyan: '#00ffff',
         },
       },
       fontFamily: {
