@@ -257,7 +257,7 @@ export const Hero = () => {
               }}
             >
               <a
-                href="/reservations"
+                href="/dashboard"
                 className="group relative overflow-hidden rounded-xl px-8 py-4 font-semibold text-sm sm:text-base transition-transform duration-300 hover:scale-105 active:scale-95"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 opacity-90 group-hover:opacity-100 transition-opacity" />

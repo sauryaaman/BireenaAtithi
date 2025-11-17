@@ -392,7 +392,7 @@ export const Testimonials = () => {
       <div className="container relative">
         <div className="mx-auto mb-16 max-w-3xl text-center">
           <h2 className="mb-6 text-3xl font-bold md:text-4xl lg:text-5xl">
-            What Our <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">Guests</span> Say
+             <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">What Our Guests Say</span> 
           </h2>
           <p className="text-lg text-gray-400">
             Read what our valued customers have to say about their dining

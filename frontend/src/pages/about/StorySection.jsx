@@ -93,7 +93,7 @@ export const StorySection = () => {
                 </span>
               </h2>
               <p className="mt-6 text-lg leading-8 text-gray-400">
-                Launched in 2020, Bireena Athiti was born from the need to
+                Launched in 2025, Bireena Athiti was born from the need to
                 simplify complex hotel operations. Our name combines "Bireena"
                 (excellence) and "Athiti" (guest), reflecting our mission to
                 elevate hospitality management through technology.
@@ -116,7 +116,7 @@ export const StorySection = () => {
                   addresses actual industry needs.
                 </p>
                 <p className="text-gray-400">
-                  Today, Bireena Athiti powers hundreds of hotels across Nepal and
+                  Today, Bireena Athiti powers hundreds of hotels across India and
                   beyond, streamlining everything from reservations and room
                   management to staff coordination and financial reporting. Our
                   platform brings modern efficiency while preserving the personal
