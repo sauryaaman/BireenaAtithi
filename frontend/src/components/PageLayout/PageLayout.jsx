@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Sidebar from '../Sidebar/Sidebar';
+import PageHeader from '../shared/PageHeader';
 import './PageLayout.css';
 
 const PageLayout = ({ children }) => {
@@ -9,7 +10,10 @@ const PageLayout = ({ children }) => {
     <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <Sidebar onCollapse={setIsSidebarCollapsed} />
       <div className="page-container">
-        {children}
+        <PageHeader />
+        <div className="page-content">
+          {children}
+        </div>
       </div>
     </div>
   );

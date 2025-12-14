@@ -140,7 +140,7 @@ const RoomManagement = () => {
         });
         fetchRooms();
       } catch (err) {
-        console.log('Error deleting room:', err);
+        // console.log('Error deleting room:', err);
         setError(err.response?.data?.message || 'Failed to delete room');
       }
     }
@@ -213,12 +213,12 @@ const RoomManagement = () => {
   return (
     <div className="room-management">
       {/* Header */}
-      <div className="header">
+      {/* <div className="header">
         <h1>Room Management</h1>
         <div className="profile-section">
 
         </div>
-      </div>
+      </div> */}
 
       {/* Search and Filters */}
       <div className="search-filter-section">

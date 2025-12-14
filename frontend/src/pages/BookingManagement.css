@@ -691,6 +691,91 @@
   opacity: 0.7;
 }
 
+/* Order Food Button */
+.order-food-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background-color: #FF9800;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.order-food-btn:hover:not(:disabled) {
+  background-color: #F57C00;
+  transform: translateY(-1px);
+}
+
+.order-food-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Edit Food Button */
+.edit-food-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background-color: #2196F3;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.edit-food-btn:hover:not(:disabled) {
+  background-color: #1976D2;
+  transform: translateY(-1px);
+}
+
+.edit-food-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Pay Food Button */
+.pay-food-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background-color: #667eea;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.pay-food-btn:hover:not(:disabled) {
+  background-color: #5568d3;
+  transform: translateY(-1px);
+}
+
+.pay-food-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pay-food-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 /* Add this at the end of your CSS file */
 .dialog-overlay {
   position: fixed;

@@ -67,9 +67,15 @@ const ProfileDropdown = () => {
     };
 
     const handleViewProfile = () => {
-        navigate('/view-profile', { 
-            state: { userDetails, hotelDetails } 
-        });
+        // Check if user is staff by checking if they have staff_id
+        const isStaff = localStorage.getItem('isStaff') === 'true';
+        if (isStaff) {
+            navigate('/staff-profile');
+        } else {
+            navigate('/view-profile', { 
+                state: { userDetails, hotelDetails } 
+            });
+        }
         setIsOpen(false);
     };
 
@@ -80,10 +86,12 @@ const ProfileDropdown = () => {
         setIsOpen(false);
     };
 
+    const isStaff = localStorage.getItem('isStaff') === 'true';
+
     return (
         <div className="profile-dropdown" ref={dropdownRef}>
             <div className="profile-icon" onClick={() => setIsOpen(!isOpen)}>
-                {hotelDetails?.hotel_logo_url ? (
+                {!isStaff && hotelDetails?.hotel_logo_url ? (
                     <img 
                         src={hotelDetails.hotel_logo_url} 
                         alt="Hotel Logo" 
@@ -91,7 +99,7 @@ const ProfileDropdown = () => {
                     />
                 ) : (
                     <div className="default-logo">
-                        {userDetails?.hotel_name?.charAt(0) || 'H'}
+                        {isStaff ? (userDetails?.name?.charAt(0) || 'S') : (userDetails?.hotel_name?.charAt(0) || 'H')}
                     </div>
                 )}
             </div>
@@ -101,7 +109,7 @@ const ProfileDropdown = () => {
                     <div className="dropdown-header">
                         <div className="profile-info">
                             <div className="profile-image-container">
-                                {hotelDetails?.hotel_logo_url ? (
+                                {!isStaff && hotelDetails?.hotel_logo_url ? (
                                     <img 
                                         src={hotelDetails.hotel_logo_url} 
                                         alt="Hotel Logo"
@@ -109,25 +117,28 @@ const ProfileDropdown = () => {
                                     />
                                 ) : (
                                     <div className="profile-image-placeholder">
-                                        <FaCamera />
+                                        <FaUser />
                                     </div>
                                 )}
                             </div>
                             <div className="profile-text">
                                 <span className="user-name">{userDetails?.name}</span>
-                                <span className="hotel-name">{userDetails?.hotel_name}</span>
+                                {!isStaff && <span className="hotel-name">{userDetails?.hotel_name}</span>}
+                                {isStaff && <span className="staff-role">Staff Member</span>}
                             </div>
                         </div>
                     </div>
                     <div className="dropdown-divider"></div>
-                    <button onClick={() => { navigate('/profile'); setIsOpen(false); }} className="dropdown-item">
+                    <button onClick={handleViewProfile} className="dropdown-item">
                         <FaUser className="dropdown-icon" />
                         <span>View Profile</span>
                     </button>
-                    <button onClick={() => { navigate('/edit-profile'); setIsOpen(false); }} className="dropdown-item">
-                        <FaEdit className="dropdown-icon" />
-                        <span>Edit Profile</span>
-                    </button>
+                    {!isStaff && (
+                        <button onClick={handleEditProfile} className="dropdown-item">
+                            <FaEdit className="dropdown-icon" />
+                            <span>Edit Profile</span>
+                        </button>
+                    )}
                     <button onClick={() => { navigate('/change-password'); setIsOpen(false); }} className="dropdown-item">
                         <FaKey className="dropdown-icon" />
                         <span>Change Password</span>
@@ -137,6 +148,7 @@ const ProfileDropdown = () => {
                         onClick={() => {
                             localStorage.removeItem('token');
                             localStorage.removeItem('userInfo');
+                            localStorage.removeItem('isStaff');
                             navigate('/login');
                         }} 
                         className="dropdown-item logout-item"

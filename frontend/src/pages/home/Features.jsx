@@ -114,41 +114,43 @@ import {
 
 const features = [
   {
-    title: 'Menu Management',
-    description:
-      'Easily update and customize your menu items with real-time changes.',
-    icon: faUtensils,
-    colorTheme: 'primary'
-  },
-  {
-    title: 'Online Reservations',
-    description: 'Seamless table booking system for your customers.',
+    title: 'Room Management',
+    description: 'Easily manage rooms, availability, pricing, check-in, and check-out with automatic room billing.',
     icon: faCalendar,
     colorTheme: 'success'
   },
   {
-    title: 'Secure Payments',
-    description: 'Multiple payment options with secure transaction processing.',
+    title: 'Restaurant Management',
+    description:
+      ' Easily manage food menus, prices, categories, and availability along with complete restaurant operations including orders, KOT, and table management.',
+    icon: faUtensils,
+    colorTheme: 'primary'
+  },
+  
+  {
+    title: 'Smart Billing & KOT Management',
+    description: 'Automatically generate KOT tokens for every food order,  Print room bill and food bill together in one click, with separate pages for clarity.',
+                
     icon: faCreditCard,
     colorTheme: 'info'
   },
   {
-    title: 'SEO Optimized',
+    title: 'In-Room Food Ordering',
     description:
-      'Enhanced visibility for better reach and customer engagement.',
+      'Order food directly from guest rooms. also by manauaally from frontdesk.',
     icon: faSearch,
     colorTheme: 'purple'
   },
   {
-    title: 'Loyalty Program',
+    title: 'Advanced Reports & Analytics',
     description:
-      'Reward your regular customers with special offers and points.',
+      'Generate reports using dynamic date filters ,View sales summaries, transaction details, and trend analysis for better decision-making.',
     icon: faStar,
     colorTheme: 'warning'
   },
   {
-    title: 'Customer Feedback',
-    description: 'Collect and manage customer reviews and ratings.',
+    title: 'User Roles & Permissions',
+    description: 'Assign custom permissions to each user.Admins can control exactly what each staff member can view or manage..',
     icon: faMessage,
     colorTheme: 'danger'
   },

@@ -251,7 +251,7 @@ const CashierReport = () => {
                 },
                 headers: { Authorization: `Bearer ${token}` }
             });
-            console.log(response.data);
+            // console.log(response.data);
             setSummaryData(response.data);
         } catch (err) {
             setError('Failed to fetch summary data');
@@ -347,7 +347,7 @@ const fetchTrends = async () => {
             },
             headers: { Authorization: `Bearer ${token}` }
         });
-       console.log("satart",startDate,"end", endDate, response.data);
+    //    console.log("satart",startDate,"end", endDate, response.data);
 
         // Map backend response to local dates for UI
         const dates = [];
@@ -725,7 +725,7 @@ const fetchTrends = async () => {
 
     return (
         <div className="cashier-report">
-            <h1>Cashier Report</h1>
+            
 
             {/* Tabs */}
             <div className="report-tabs">

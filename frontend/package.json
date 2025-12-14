@@ -26,6 +26,7 @@
     "formik": "^2.4.5",
     "framer-motion": "^12.23.16",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.12.1",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.544.0",

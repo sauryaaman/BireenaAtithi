@@ -447,9 +447,10 @@
     border: 1px solid #4299e1;
     border-radius: 0.25rem;
     background-color: #4299e1;
-    color: white;
+    color: #000000 !important;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 600;
     white-space: nowrap;
     min-width: 120px;
 }
@@ -457,10 +458,125 @@
 .search-availability-btn:hover {
     background-color: #3182ce;
     border-color: #3182ce;
+    color: #000000 !important;
 }
 
 .search-availability-btn:disabled {
     background-color: #a0aec0;
     border-color: #a0aec0;
     cursor: not-allowed;
+    color: #000000 !important;
+}
+
+.add-room-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    background-color: #ff8c00 !important;
+    color: white !important;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.add-room-btn:hover {
+    background-color: #e67e00 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(255, 140, 0, 0.3);
+}
+
+/* Manual Pricing Section */
+.manual-pricing-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.toggle-manual-pricing-btn {
+    padding: 0.4rem 0.8rem;
+    background-color: #ff8c00 !important;
+    color: white !important;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: auto;
+    margin-bottom: 1rem;
+}
+
+.toggle-manual-pricing-btn:hover {
+    background-color: #e67e00 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(255, 140, 0, 0.3);
+}
+
+.room-nightly-prices {
+    margin-top: 1rem;
+}
+
+.room-nightly-prices h5 {
+    color: #1e293b;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.existing-room-label {
+    font-size: 0.85rem;
+    color: #3b82f6;
+    font-weight: 500;
+    margin-left: 0.5rem;
+    padding: 0.2rem 0.5rem;
+    background: #dbeafe;
+    border-radius: 4px;
+}
+
+.night-price-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.night-price-row label {
+    min-width: 80px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.price-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s ease;
+}
+
+.price-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.room-total {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 6px;
+    text-align: right;
+    font-size: 1.05rem;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+}
+
+.room-total strong {
+    color: #2563eb;
 }

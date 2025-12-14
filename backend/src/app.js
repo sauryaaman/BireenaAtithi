@@ -9,6 +9,10 @@ const superAdminRoutes = require('./routes/superAdminRoutes');
 const auth = require('./middleware/auth');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const cashierRoutes = require('./routes/cashierRoutes');
+const staffRoutes = require('./routes/staffRoutes');
+const foodRoutes = require('./routes/foodRoutes');
+const foodOrderRoutes = require('./routes/foodOrderRoutes');
+const foodPaymentRoutes = require('./routes/foodPaymentRoutes');
 
 const app = express();
 
@@ -48,6 +52,10 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cashier', cashierRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/menu', foodRoutes);
+app.use('/api/food-orders', foodOrderRoutes);
+app.use('/api/food-payments', foodPaymentRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

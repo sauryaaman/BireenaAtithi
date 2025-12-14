@@ -81,16 +81,10 @@ const StatCard = ({ title, value, icon: Icon, color, bgColor, actionIcon, onActi
     };
 
   return (
-    <div className="dashboard-container">
-      {/* <h1>Hotel Dashboard</h1> */}
-      
+    <>
+      {/* <div className="dashboard-container"> */}
       <div className="stats-section">
-        <div className="dashboard-header">
-          <h1>Hotel Dashboard</h1>
-          <div className="profile-section">
-            <HotelLogo className="dashboard-logo" />
-          </div>
-        </div>
+        <h2>Room Statistics</h2>
         <div className="stats-grid">
           <StatCard
             title="Total Rooms"
@@ -220,13 +214,9 @@ const StatCard = ({ title, value, icon: Icon, color, bgColor, actionIcon, onActi
         
 
 
-
-
-
-
-
             
-    </div>
+    {/* </div> */}
+    </>
   );
 };
 

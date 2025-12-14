@@ -20,19 +20,19 @@ const getSummary = async (req, res) => {
             .subtract(30, 'minutes')         // Convert to UTC (part 2)
             .format();
 
-        console.log('Getting summary for:', {
-            user_id,
-            date_range: {
-                ist: {
-                    start: moment.tz(start_date, timezone).format('YYYY-MM-DD HH:mm:ss'),
-                    end: moment.tz(end_date, timezone).format('YYYY-MM-DD HH:mm:ss')
-                },
-                utc: {
-                    start: startUtc,
-                    end: endUtc
-                }
-            }
-        });
+        // console.log('Getting summary for:', {
+        //     user_id,
+        //     date_range: {
+        //         ist: {
+        //             start: moment.tz(start_date, timezone).format('YYYY-MM-DD HH:mm:ss'),
+        //             end: moment.tz(end_date, timezone).format('YYYY-MM-DD HH:mm:ss')
+        //         },
+        //         utc: {
+        //             start: startUtc,
+        //             end: endUtc
+        //         }
+        //     }
+        // });
 
         // Get bookings summary for date range using UTC timestamps
         const { data: bookings, error: bookingsError } = await supabase
@@ -61,7 +61,7 @@ const getSummary = async (req, res) => {
             throw bookingsError;
         }
 
-        console.log('Found bookings:', bookings.length);
+        // console.log('Found bookings:', bookings.length);
 
         // Filter out bookings for other users and calculate basic booking totals
         const summary = bookings.reduce((acc, booking) => {
@@ -112,14 +112,14 @@ const getSummary = async (req, res) => {
             type: t.is_refund ? 'refund' : 'payment'
         }));
 
-        console.log('Found transactions:', {
-            count: transactions?.length || 0,
-            date_range: {
-                start: startUtc,
-                end: endUtc
-            },
-            transactions: transactionSummary
-        });
+        // console.log('Found transactions:', {
+        //     count: transactions?.length || 0,
+        //     date_range: {
+        //         start: startUtc,
+        //         end: endUtc
+        //     },
+        //     transactions: transactionSummary
+        // });
 
         // Calculate collections, refunds and their counts from payment transactions
         const { total_collection, total_refunds, payment_count, refund_count } = transactions.reduce((acc, trans) => {
@@ -197,7 +197,7 @@ const getSummary = async (req, res) => {
             }
         };
 
-        console.log('Response summary:', response);
+        // console.log('Response summary:', response);
         res.json(response);
     } catch (error) {
         console.error('Error in getSummary:', error);
@@ -239,7 +239,7 @@ const getDailyTransactions = async (req, res) => {
             .subtract(30, 'minutes')
             .format();
 
-        console.log('Getting transactions for range:', { user_id, start_date, end_date, startUtc, endUtc });
+        // console.log('Getting transactions for range:', { user_id, start_date, end_date, startUtc, endUtc });
 
         const { data: transactions, error } = await supabase
             .from('payment_transactions')
@@ -273,7 +273,7 @@ const getDailyTransactions = async (req, res) => {
             throw error;
         }
 
-        console.log('Found transactions:', transactions?.length || 0);
+        // console.log('Found transactions:', transactions?.length || 0);
 
         // Convert UTC timestamps to IST in the response
         const transactionsWithIST = transactions.map(trans => ({
@@ -298,332 +298,7 @@ const getDailyTransactions = async (req, res) => {
     }
 };
 
-// Get payment trends
-// const dayjs = require('dayjs');
-// const utc = require('dayjs/plugin/utc');
-// const timezone = require('dayjs/plugin/timezone');
 
-// // Initialize dayjs plugins
-// dayjs.extend(utc);
-// dayjs.extend(timezone);
-
-// const getPaymentTrends = async (req, res) => {
-//     try {
-//         const { start_date, end_date, timezone: userTimezone = 'Asia/Kolkata' } = req.query;
-//         const user_id = req.user?.user_id;
-        
-//         // Convert start and end dates to UTC for querying Supabase
-//         const startUtc = dayjs.tz(start_date, userTimezone).startOf('day').utc().format();
-//         const endUtc = dayjs.tz(end_date, userTimezone).endOf('day').utc().format();
-
-//         console.log('Getting payment trends for:', {
-//             user_id,
-//             start_date,
-//             end_date,
-//             timezone: userTimezone,
-//             startUtc,
-//             endUtc
-//         });
-
-//         const { data: transactions, error } = await supabase
-//             .from('payment_transactions')
-//             .select('amount_paid, payment_mode, created_at, is_refund')
-//             .eq('user_id', user_id)
-//             .gte('created_at', startUtc)
-//             .lte('created_at', endUtc)
-//             .order('created_at', { ascending: true });
-
-//         if (error) {
-//             console.error('Payment trends query error:', error);
-//             throw error;
-//         }
-
-//         // Group by date and payment mode using user's timezone
-//         const trends = transactions.reduce((acc, trans) => {
-//             // Convert UTC timestamp to user's local date
-//             const date = dayjs(trans.created_at).tz(userTimezone).format('YYYY-MM-DD');
-            
-//             if (!acc[date]) {
-//                 acc[date] = {
-//                     date,
-//                     // Payment totals
-//                     total_payments: 0,
-//                     total_refunds: 0,
-//                     net_collection: 0,
-//                     // Transaction counts
-//                     payment_count: 0,
-//                     refund_count: 0,
-//                     // Payment mode wise amounts
-//                     payments: {
-//                         Cash: 0,
-//                         Card: 0,
-//                         UPI: 0,
-//                         'Bank Transfer': 0,
-//                         Other: 0
-//                     },
-//                     // Refund mode wise amounts
-//                     refunds: {
-//                         Cash: 0,
-//                         Card: 0,
-//                         UPI: 0,
-//                         'Bank Transfer': 0,
-//                         Other: 0
-//                     }
-//                 };
-//             }
-            
-//             const mode = trans.payment_mode || 'Other';
-//             const amount = trans.amount_paid || 0;
-            
-//             if (trans.is_refund) {
-//                 // Handle refund transaction
-//                 acc[date].total_refunds += amount;
-//                 acc[date].refund_count += 1;
-//                 acc[date].refunds[mode] = (acc[date].refunds[mode] || 0) + amount;
-//             } else {
-//                 // Handle payment transaction
-//                 acc[date].total_payments += amount;
-//                 acc[date].payment_count += 1;
-//                 acc[date].payments[mode] = (acc[date].payments[mode] || 0) + amount;
-//             }
-
-//             // Calculate net collection for the day
-//             acc[date].net_collection = acc[date].total_payments - acc[date].total_refunds;
-//             return acc;
-//         }, {});        const trendArray = Object.values(trends);
-//         console.log('Generated trends for days:', trendArray.length);
-
-//         res.json(trendArray);
-//     } catch (error) {
-//         console.error('Error in getPaymentTrends:', error);
-//         res.status(500).json({
-//             error: 'Internal server error',
-//             details: error.message
-//         });
-//     }
-// };
-
-
-// const dayjs = require('dayjs');
-// const utc = require('dayjs/plugin/utc');
-// const timezone = require('dayjs/plugin/timezone');
-
-// // Initialize dayjs plugins
-// dayjs.extend(utc);
-// dayjs.extend(timezone);
-
-
-// const getPaymentTrends = async (req, res) => {
-//     try {
-//         const { start_date, end_date, timezone: userTimezone = 'Asia/Kolkata' } = req.query;
-//         const user_id = req.user?.user_id;
-
-//         // ✅ Convert user-selected local dates into UTC for query filtering
-//         const startUtc = dayjs.tz(start_date, userTimezone).startOf('day');
-//         const endUtc = dayjs.tz(end_date, userTimezone).endOf('day');
-//         // .utc().format()
-
-//         console.log('Getting payment trends for:', {
-//             user_id,
-//             start_date,
-//             end_date,
-//             timezone: userTimezone,
-//             startUtc,
-//             endUtc
-//         });
-
-//         // ✅ Query Supabase for all transactions in the UTC range
-//         const { data: transactions, error } = await supabase
-//             .from('payment_transactions')
-//             .select('amount_paid, payment_mode, created_at, is_refund')
-//             .eq('user_id', user_id)
-//             .gte('created_at', startUtc)
-//             .lte('created_at', endUtc)
-//             .order('created_at', { ascending: true });
-
-//         if (error) {
-//             console.error('Payment trends query error:', error);
-//             throw error;
-//         }
-
-//         // ✅ Group transactions by the *user’s local date*
-//         const trends = transactions.reduce((acc, trans) => {
-//             // Convert UTC created_at → local user date
-//             const localDate = dayjs(trans.created_at).tz(userTimezone).format('YYYY-MM-DD');
-
-//             if (!acc[localDate]) {
-//                 acc[localDate] = {
-//                     date: localDate,
-//                     total_payments: 0,
-//                     total_refunds: 0,
-//                     net_collection: 0,
-//                     payment_count: 0,
-//                     refund_count: 0,
-//                     payments: {
-//                         Cash: 0,
-//                         Card: 0,
-//                         UPI: 0,
-//                         'Bank Transfer': 0,
-//                         Other: 0
-//                     },
-//                     refunds: {
-//                         Cash: 0,
-//                         Card: 0,
-//                         UPI: 0,
-//                         'Bank Transfer': 0,
-//                         Other: 0
-//                     }
-//                 };
-//             }
-
-//             const mode = trans.payment_mode || 'Other';
-//             const amount = trans.amount_paid || 0;
-
-//             if (trans.is_refund) {
-//                 acc[localDate].total_refunds += amount;
-//                 acc[localDate].refund_count += 1;
-//                 acc[localDate].refunds[mode] = (acc[localDate].refunds[mode] || 0) + amount;
-//             } else {
-//                 acc[localDate].total_payments += amount;
-//                 acc[localDate].payment_count += 1;
-//                 acc[localDate].payments[mode] = (acc[localDate].payments[mode] || 0) + amount;
-//             }
-
-//             // ✅ Always recompute net collection after update
-//             acc[localDate].net_collection = acc[localDate].total_payments - acc[localDate].total_refunds;
-//             return acc;
-//         }, {});
-
-//         // ✅ Convert object → sorted array by local date
-//         const trendArray = Object.values(trends).sort((a, b) =>
-//             dayjs(a.date).unix() - dayjs(b.date).unix()
-//         );
-
-//         console.log('Generated trends for days:', trendArray.length);
-
-//         // ✅ Return array
-//         res.json(trendArray);
-//     } catch (error) {
-//         console.error('Error in getPaymentTrends:', error);
-//         res.status(500).json({
-//             error: 'Internal server error',
-//             details: error.message
-//         });
-//     }
-// };
-
-
-
-// const dayjs = require('dayjs');
-// const utc = require('dayjs/plugin/utc');
-// const timezone = require('dayjs/plugin/timezone');
-// const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
-
-// // Initialize plugins
-// dayjs.extend(utc);
-// dayjs.extend(timezone);
-// dayjs.extend(isSameOrBefore);
-
-// const getPaymentTrends = async (req, res) => {
-//   try {
-//     let { start_date, end_date, timezone: userTimezone } = req.query;
-//     const user_id = req.user?.user_id;
-
-//     // Fallback timezone
-//     if (!userTimezone) userTimezone = 'Asia/Kolkata';
-//     if (userTimezone.toLowerCase() === 'asia/calcutta') userTimezone = 'Asia/Kolkata';
-
-//     // Convert user-selected local dates to UTC range
-//     const startUtc = dayjs.tz(start_date, userTimezone).startOf('day').utc().toISOString();
-//     const endUtc = dayjs.tz(end_date, userTimezone).endOf('day').utc().toISOString();
-
-//     // Debug logs
-//     console.log('Getting payment trends for:', {
-//       user_id,
-//       start_date,
-//       end_date,
-//       userTimezone,
-//       startUtc,
-//       endUtc
-//     });
-
-//     // Fetch all transactions in UTC range
-//     const { data: transactions, error } = await supabase
-//       .from('payment_transactions')
-//       .select('amount_paid, payment_mode, created_at, is_refund')
-//       .eq('user_id', user_id)
-//       .gte('created_at', startUtc)
-//       .lte('created_at', endUtc)
-//       .order('created_at', { ascending: true });
-
-//     if (error) throw error;
-
-//     // Group transactions by user's local date
-//     const trendsMap = transactions.reduce((acc, trans) => {
-//       const localDate = dayjs(trans.created_at).tz(userTimezone).format('YYYY-MM-DD');
-
-//       if (!acc[localDate]) {
-//         acc[localDate] = {
-//           date: localDate,
-//           total_payments: 0,
-//           total_refunds: 0,
-//           net_collection: 0,
-//           payment_count: 0,
-//           refund_count: 0,
-//           payments: { Cash: 0, Card: 0, UPI: 0, 'Bank Transfer': 0, Other: 0 },
-//           refunds: { Cash: 0, Card: 0, UPI: 0, 'Bank Transfer': 0, Other: 0 }
-//         };
-//       }
-
-//       const mode = trans.payment_mode || 'Other';
-//       const amount = Number(trans.amount_paid) || 0;
-
-//       if (trans.is_refund) {
-//         acc[localDate].total_refunds += amount;
-//         acc[localDate].refund_count += 1;
-//         acc[localDate].refunds[mode] = (acc[localDate].refunds[mode] || 0) + amount;
-//       } else {
-//         acc[localDate].total_payments += amount;
-//         acc[localDate].payment_count += 1;
-//         acc[localDate].payments[mode] = (acc[localDate].payments[mode] || 0) + amount;
-//       }
-
-//       // Always recompute net collection
-//       acc[localDate].net_collection = acc[localDate].total_payments - acc[localDate].total_refunds;
-
-//       return acc;
-//     }, {});
-
-//     // Fill missing dates between start and end
-//     const allDates = [];
-//     let current = dayjs(start_date);
-//     const last = dayjs(end_date);
-
-//     while (current.isSameOrBefore(last, 'day')) {
-//       allDates.push(current.format('YYYY-MM-DD'));
-//       current = current.add(1, 'day');
-//     }
-
-//     const finalTrends = allDates.map(d => trendsMap[d] || {
-//       date: d,
-//       total_payments: 0,
-//       total_refunds: 0,
-//       net_collection: 0,
-//       payment_count: 0,
-//       refund_count: 0,
-//       payments: { Cash: 0, Card: 0, UPI: 0, 'Bank Transfer': 0, Other: 0 },
-//       refunds: { Cash: 0, Card: 0, UPI: 0, 'Bank Transfer': 0, Other: 0 }
-//     });
-
-//     res.json(finalTrends);
-//   } catch (err) {
-//     console.error('Error in getPaymentTrends:', err);
-//     res.status(500).json({
-//       error: 'Internal server error',
-//       details: err.message
-//     });
-//   }
-// };
 
 
 
@@ -652,19 +327,19 @@ const getPaymentTrends = async (req, res) => {
       .subtract(30, 'minutes')         // Convert to UTC (part 2)
       .format();
 
-    console.log('Query parameters:', {
-      input_dates: { start_date, end_date },
-      ist_range: {
-        start: moment.tz(start_date, timezone).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
-        end: moment.tz(end_date, timezone).endOf('day').format('YYYY-MM-DD HH:mm:ss')
-      },
-      utc_query_range: {
-        start: startUtc,
-        end: endUtc,
-        start_ist: moment(startUtc).tz(timezone).format('YYYY-MM-DD HH:mm:ss'),
-        end_ist: moment(endUtc).tz(timezone).format('YYYY-MM-DD HH:mm:ss')
-      }
-    });
+    // console.log('Query parameters:', {
+    //   input_dates: { start_date, end_date },
+    //   ist_range: {
+    //     start: moment.tz(start_date, timezone).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
+    //     end: moment.tz(end_date, timezone).endOf('day').format('YYYY-MM-DD HH:mm:ss')
+    //   },
+    //   utc_query_range: {
+    //     start: startUtc,
+    //     end: endUtc,
+    //     start_ist: moment(startUtc).tz(timezone).format('YYYY-MM-DD HH:mm:ss'),
+    //     end_ist: moment(endUtc).tz(timezone).format('YYYY-MM-DD HH:mm:ss')
+    //   }
+    // });
 
     // Get transactions in UTC range
     const { data: transactions, error } = await supabase
@@ -686,7 +361,7 @@ const getPaymentTrends = async (req, res) => {
 
     if (error) throw error;
 
-    console.log(`Found ${transactions.length} transactions`);
+    // console.log(`Found ${transactions.length} transactions`);
 
     // Initialize map for each day in range
     const trendsMap = {};
@@ -713,22 +388,22 @@ const getPaymentTrends = async (req, res) => {
       // Convert UTC timestamp to IST date
       const istDate = moment.tz(trans.created_at, 'UTC').tz(timezone).format('YYYY-MM-DD');
       
-      console.log('Processing transaction:', {
-        utc_time: trans.created_at,
-        ist_time: moment.tz(trans.created_at, 'UTC').tz(timezone).format('YYYY-MM-DD HH:mm:ss'),
-        ist_date: istDate,
-        amount: trans.amount_paid,
-        mode: trans.payment_mode,
-        is_refund: trans.is_refund
-      });
+    //   console.log('Processing transaction:', {
+    //     utc_time: trans.created_at,
+    //     ist_time: moment.tz(trans.created_at, 'UTC').tz(timezone).format('YYYY-MM-DD HH:mm:ss'),
+    //     ist_date: istDate,
+    //     amount: trans.amount_paid,
+    //     mode: trans.payment_mode,
+    //     is_refund: trans.is_refund
+    //   });
       
       if (!trendsMap[istDate]) {
-        console.log('Warning: Transaction date mismatch:', {
-          transaction_date: istDate,
-          utc: trans.created_at,
-          ist: moment.tz(trans.created_at, 'UTC').tz(timezone).format('YYYY-MM-DD HH:mm:ss'),
-          valid_dates: Object.keys(trendsMap)
-        });
+        // console.log('Warning: Transaction date mismatch:', {
+        //   transaction_date: istDate,
+        //   utc: trans.created_at,
+        //   ist: moment.tz(trans.created_at, 'UTC').tz(timezone).format('YYYY-MM-DD HH:mm:ss'),
+        //   valid_dates: Object.keys(trendsMap)
+        // });
         return;
       }
 
@@ -748,28 +423,28 @@ const getPaymentTrends = async (req, res) => {
       trendsMap[istDate].net_collection = 
         trendsMap[istDate].total_payments - trendsMap[istDate].total_refunds;
 
-      console.log(`Updated totals for ${istDate}:`, {
-        payments: trendsMap[istDate].total_payments,
-        refunds: trendsMap[istDate].total_refunds,
-        net: trendsMap[istDate].net_collection,
-        payment_count: trendsMap[istDate].payment_count,
-        refund_count: trendsMap[istDate].refund_count
-      });
+    //   console.log(`Updated totals for ${istDate}:`, {
+    //     payments: trendsMap[istDate].total_payments,
+    //     refunds: trendsMap[istDate].total_refunds,
+    //     net: trendsMap[istDate].net_collection,
+    //     payment_count: trendsMap[istDate].payment_count,
+    //     refund_count: trendsMap[istDate].refund_count
+    //   });
     });
 
     // Sort and prepare final results
     const finalTrends = Object.values(trendsMap)
       .sort((a, b) => moment.tz(a.date, timezone).diff(moment.tz(b.date, timezone)));
 
-    console.log('\nFinal summary by date:');
+    // console.log('\nFinal summary by date:');
     finalTrends.forEach(day => {
-      console.log(`${day.date}:`);
-      console.log(`- Payments: ${day.payment_count} transactions totaling ${day.total_payments}`);
-      console.log(`- Refunds: ${day.refund_count} transactions totaling ${day.total_refunds}`);
-      console.log(`- Net collection: ${day.net_collection}`);
-      console.log('- Payment modes:', day.payments);
-      console.log('- Refund modes:', day.refunds);
-      console.log('');
+    //   console.log(`${day.date}:`);
+    //   console.log(`- Payments: ${day.payment_count} transactions totaling ${day.total_payments}`);
+    //   console.log(`- Refunds: ${day.refund_count} transactions totaling ${day.total_refunds}`);
+    //   console.log(`- Net collection: ${day.net_collection}`);
+    //   console.log('- Payment modes:', day.payments);
+    //   console.log('- Refund modes:', day.refunds);
+    //   console.log('');
     });
 
     res.json(finalTrends);

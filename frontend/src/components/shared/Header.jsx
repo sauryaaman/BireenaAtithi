@@ -369,14 +369,38 @@ export const Header = () => {
           </div>
 
           {/* Auth Button */}
-          <div className="hidden items-center gap-4 md:flex">
+          <div className="hidden items-center gap-3 md:flex">
+            {/* Go to POS Button */}
+            <a 
+              href="https://kot.bireenaatithi.in" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative overflow-hidden rounded-xl px-5 py-2.5 font-bold text-sm transition-all duration-300 hover:scale-105 active:scale-95"
+            >
+              {/* Animated gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 opacity-90 group-hover:opacity-100 transition-opacity" />
+              
+              {/* Shine effect */}
+              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out" />
+              
+              {/* Glow */}
+              <div className="absolute inset-0 rounded-xl bg-orange-500 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
+              
+              <span className="relative text-white flex items-center gap-2">
+                Go to POS
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </span>
+            </a>
+
             {isAuthenticated ? (
               <button
                 onClick={handleLogout}
                 className="group relative overflow-hidden rounded-xl px-4 py-2.5 font-bold text-sm transition-all duration-300 hover:scale-105 active:scale-95"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-red-600 opacity-90 group-hover:opacity-100 transition-opacity" />
-                <span className="relative text-white">Logout</span>
+                <span className="relative text-white">Logout For Hotel</span>
               </button>
             ) : (
               <Link to="/login" className="group relative overflow-hidden rounded-xl px-6 py-2.5 font-bold text-sm transition-all duration-300 hover:scale-105 active:scale-95">
@@ -390,7 +414,7 @@ export const Header = () => {
                 <div className="absolute inset-0 rounded-xl bg-cyan-500 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
                 
                 <span className="relative text-white flex items-center gap-2">
-                  Login
+                  Go to Hotel
                   <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -452,15 +476,30 @@ export const Header = () => {
                 );
               })}
 
+              {/* Go to POS Button for Mobile */}
+              <a 
+                href="https://kot.bireenaatithi.in/login" 
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsOpen(false)}
+                className="mt-4 relative overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3 font-bold text-white text-center shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+              >
+                <div className="absolute inset-0 translate-x-[-100%] hover:translate-x-[100%] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700" />
+                <span className="relative">Go to POS</span>
+                <svg className="relative w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+
               {isAuthenticated ? (
                 <button
                   onClick={() => { handleLogout(); setIsOpen(false); }}
-                  className="mt-4 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-400 to-red-600 px-4 py-3 font-bold text-white text-center shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                  className="mt-2 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-400 to-red-600 px-4 py-3 font-bold text-white text-center shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all duration-300 hover:scale-[1.02] active:scale-95"
                 >
                   <span className="relative">Logout</span>
                 </button>
               ) : (
-                <Link to="/login" onClick={() => setIsOpen(false)} className="mt-4 relative overflow-hidden rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 font-bold text-white text-center shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 hover:scale-[1.02] active:scale-95">
+                <Link to="/login" onClick={() => setIsOpen(false)} className="mt-2 relative overflow-hidden rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 font-bold text-white text-center shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 hover:scale-[1.02] active:scale-95">
                   <div className="absolute inset-0 translate-x-[-100%] hover:translate-x-[100%] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700" />
                   <span className="relative">Login</span>
                 </Link>

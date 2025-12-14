@@ -196,7 +196,7 @@ const BookingForm = () => {
         roomSelections: newSelections
         
       }));
-      console.log('Updated form data with room selections:', formData.roomSelections);
+      // console.log('Updated form data with room selections:', formData.roomSelections);
        
     } catch (err) {
       console.error('Error searching rooms:', err);
@@ -400,8 +400,14 @@ const BookingForm = () => {
         });
 
         // Calculate nightly rates array for backward compatibility
+        // Only include rooms that are using manual nightly pricing
         const hasNightlyRates = validRooms.some(room => room.showNightlyRates);
         const nightlyRates = hasNightlyRates ? validRooms.flatMap(room => {
+          // Only process rooms with manual nightly pricing
+          if (!room.showNightlyRates) {
+            return []; // Skip rooms without manual pricing
+          }
+          
           const nights = room.nights || 0;
           return Array.from({ length: nights }).map((_, index) => ({
             night: index + 1,
@@ -411,15 +417,15 @@ const BookingForm = () => {
         }) : null;
 
         // Log nightly rates calculation
-        console.log('Night by night rates:', nightlyRates);
-        console.log('Valid rooms with nightly rates:', validRooms.map(room => ({
-          roomId: room.roomId,
-          showNightlyRates: room.showNightlyRates,
-          nights: room.nights,
-          prices: Object.keys(nightlyPrices)
-            .filter(key => key.startsWith(room.roomId))
-            .map(key => ({ night: key.split('-')[1], price: nightlyPrices[key] }))
-        })));
+        // console.log('Night by night rates:', nightlyRates);
+        // console.log('Valid rooms with nightly rates:', validRooms.map(room => ({
+        //   roomId: room.roomId,
+        //   showNightlyRates: room.showNightlyRates,
+        //   nights: room.nights,
+        //   prices: Object.keys(nightlyPrices)
+        //     .filter(key => key.startsWith(room.roomId))
+        //     .map(key => ({ night: key.split('-')[1], price: nightlyPrices[key] }))
+        // })));
 
         const bookingData = {
           primary_guest: primaryGuest,
@@ -443,12 +449,12 @@ const BookingForm = () => {
           nightly_rates: nightlyRates // For backward compatibility
         };
 
-        console.log('Sending booking data to backend:', JSON.stringify(bookingData, null, 2));
+        // console.log('Sending booking data to backend:', JSON.stringify(bookingData, null, 2));
 
-        console.log('Making API request to create booking...', {
-          url: `${BASE_URL}/api/bookings`,
-          headers: { Authorization: 'Bearer [REDACTED]' }
-        });
+        // console.log('Making API request to create booking...', {
+        //   url: `${BASE_URL}/api/bookings`,
+        //   headers: { Authorization: 'Bearer [REDACTED]' }
+        // });
 
         // Single API call for both booking types
         const response = await axios.post(
@@ -457,8 +463,8 @@ const BookingForm = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        console.log('Backend response full:', response);
-        console.log('Backend response data:', JSON.stringify(response.data, null, 2));
+        // console.log('Backend response full:', response);
+        // console.log('Backend response data:', JSON.stringify(response.data, null, 2));
 
         // Validate response data
         if (!response.data) {
@@ -558,7 +564,7 @@ const BookingForm = () => {
           )}
         </div>
       )}
-      <h2>New Booking</h2>
+      {/* <h2>New Booking</h2> */}
       
       <form onSubmit={handleSubmit} className="booking-form">
         {/* Room Selection Section */}

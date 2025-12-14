@@ -8,9 +8,20 @@
   position: relative;
   flex-grow: 1;
   transition: all 0.3s ease;
-  background: #f9fafb;
-  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+}
+
+.page-content {
+  flex-grow: 1;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  width: 100%;
 }
 
 /* Desktop styles */
@@ -44,7 +55,10 @@
   .page-container {
     margin-left: 0;
     width: 100%;
+    padding-top: 60px; /* Navbar height */
+  }
+  
+  .page-content {
     padding: 1rem;
-    padding-top: calc(60px + 1rem); /* Navbar height + padding */
   }
 }

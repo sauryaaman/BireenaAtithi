@@ -254,10 +254,10 @@ const CustomerManagement = () => {
   return (
     <div className="customer-management">
       {/* Header Section */}
-      <div className="header">
+      {/* <div className="header">
         <h1>Customer Management</h1>
 
-      </div>
+      </div> */}
 
       {/* Actions Section */}
       <div className="actions-section">

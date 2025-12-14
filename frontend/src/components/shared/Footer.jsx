@@ -158,9 +158,9 @@ import {
 import logo from '../../../public/logo.png';
 
 const socialLinks = [
-  { name: 'Facebook', icon: Facebook, href: '#' },
-  { name: 'Instagram', icon: Instagram, href: '#' },
-  { name: 'Twitter', icon: Twitter, href: '#' },
+  { name: 'Facebook', icon: Facebook, href: 'https://www.facebook.com/share/1AA1UTr5Tc' },
+  { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/bireenainfo' },
+  // { name: 'Twitter', icon: Twitter, href: '#' },
 ];
 
 const navigation = {
@@ -208,7 +208,7 @@ export const Footer = () => {
             <div className="space-y-4 text-sm text-gray-300">
               <div className="group flex items-start gap-3 rounded-lg p-2 transition-all duration-300 hover:bg-cyan-500/5">
                 <MapPin className="h-5 w-5 shrink-0 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
-                <p className="group-hover:text-white transition-colors">B-36, Anisabad, Patna, Bihar, India 8000025</p>
+                <p className="group-hover:text-white transition-colors">B-36, Anisabad, Patna, Bihar, India 800025</p>
               </div>
               <div className="group flex items-center gap-3 rounded-lg p-2 transition-all duration-300 hover:bg-cyan-500/5">
                 <Phone className="h-5 w-5 text-cyan-400 group-hover:text-cyan-300 transition-colors" />

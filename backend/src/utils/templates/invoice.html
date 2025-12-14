@@ -4,26 +4,32 @@
     <meta charset="utf-8" />
     <title>Hotel Invoice</title>
     <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 10px;
+            padding: 5px;
             color: #333;
-            font-size: 10px;
+            font-size: 9px;
         }
 
         .invoice-container {
             max-width: 100%;
             margin: auto;
             padding: 0;
+            padding-bottom: 120px;
         }
 
         .header {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #1a237e;
         }
 
@@ -74,9 +80,9 @@
         .info-container {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 6px;
             border-radius: 3px;
         }
 
@@ -99,14 +105,20 @@
         .rooms-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 8px 0;
-            font-size: 10px;
+            margin: 6px 0;
+            font-size: 9px;
+            page-break-inside: auto;
         }
 
         .rooms-table th, .rooms-table td {
             border: 1px solid #ddd;
-            padding: 4px;
+            padding: 3px;
             text-align: left;
+        }
+
+        .rooms-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
         }
 
         .rooms-table th {
@@ -122,53 +134,71 @@
         .amount-summary {
             float: right;
             width: 250px;
-            margin: 10px 0;
-            font-size: 11px;
+            margin: 6px 0;
+            font-size: 10px;
+            page-break-inside: avoid;
         }
 
         .amount-row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
+            padding: 5px 0;
             border-bottom: 1px solid #eee;
         }
 
         .total-row {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
             border-top: 2px solid #1a237e;
-            padding-top: 10px;
-            margin-top: 10px;
+            padding-top: 8px;
+            margin-top: 8px;
         }
 
         .payment-status {
             clear: both;
             text-align: right;
-            padding: 15px 0;
+            padding: 8px 0;
             font-weight: bold;
             color: #4CAF50;
         }
 
         .bottom-section {
             position: fixed;
-            bottom: 20px;
+            bottom: 10px;
             left: 20px;
             right: 20px;
+            background: white;
+            page-break-inside: avoid;
         }
 
         .terms-conditions {
-            margin-top: 10px;
-            padding-top: 10px;
+            margin-top: 8px;
+            padding-top: 6px;
             border-top: 1px solid #ddd;
+            font-size: 7px;
+            line-height: 1.2;
+        }
+
+        .terms-conditions h4 {
             font-size: 9px;
+            margin-bottom: 5px;
+        }
+
+        .terms-conditions ol {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+
+        .terms-conditions li {
+            margin-bottom: 2px;
         }
 
         .signature-section {
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
-            padding-top: 10px;
-            gap: 40px;
+            margin-top: 5px;
+            padding-top: 4px;
+            gap: 25px;
         }
 
         .signature-box {
@@ -179,7 +209,7 @@
 
         .signature-line {
             width: 80%;
-            margin: 30px auto 5px;
+            margin: 10px auto 3px;
             border-top: 1px solid #333;
         }
     </style>
@@ -242,15 +272,35 @@
                     <th>Room Type</th>
                     <th>Room No.</th>
                     <th>Stay Duration</th>
+                    <th>Rate/Night</th>
+                    <th>Amount</th>
                 </tr>
             </thead>
             <tbody>
                 {{#each booking.rooms}}
-                <tr>
-                    <td>{{room_type}}</td>
-                    <td>{{room_number}}</td>
-                    <td>{{../booking.total_nights}} Night(s)</td>
-                </tr>
+                    {{#if has_nightly_rates}}
+                        {{!-- Different rates for different nights - Show breakdown --}}
+                        {{#each nightly_rates}}
+                        <tr>
+                            {{#if @first}}
+                            <td rowspan="{{../nightly_rates.length}}">{{../room_type}}</td>
+                            <td rowspan="{{../nightly_rates.length}}">{{../room_number}}</td>
+                            {{/if}}
+                            <td>Night {{night}}</td>
+                            <td>{{formatCurrency rate}}</td>
+                            <td>{{formatCurrency rate}}</td>
+                        </tr>
+                        {{/each}}
+                    {{else}}
+                        {{!-- Single rate for all nights --}}
+                        <tr>
+                            <td>{{room_type}}</td>
+                            <td>{{room_number}}</td>
+                            <td>{{total_nights}} Night(s)</td>
+                            <td>{{formatCurrency price_per_night}}</td>
+                            <td>{{formatCurrency (multiply price_per_night total_nights)}}</td>
+                        </tr>
+                    {{/if}}
                 {{/each}}
             </tbody>
         </table>

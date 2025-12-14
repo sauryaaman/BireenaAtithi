@@ -6,11 +6,11 @@ const getBookingDetails = async (req, res) =>{
         const { booking_id } = req.params;
         const user_id = req.user.user_id;
 
-        console.log('Fetching booking details for:', {
-            booking_id,
-            user_id,
-            params: req.params
-        });
+        // console.log('Fetching booking details for:', {
+        //     booking_id,
+        //     user_id,
+        //     params: req.params
+        // });
 
         // Get booking details including customer and primary guest
         const { data: booking, error: bookingError } = await supabase
@@ -21,6 +21,8 @@ const getBookingDetails = async (req, res) =>{
                 booking_rooms!inner (
                     room_id,
                     price_per_night,
+                    uses_nightly_rates,
+                    nightly_rates,
                     rooms:room_id (
                         *
                     )
@@ -89,7 +91,9 @@ const getBookingDetails = async (req, res) =>{
                     room_number: br.rooms.room_number,
                     room_type: br.rooms.room_type,
                     price_per_night: br.price_per_night || br.rooms.price_per_night,
-                    status: br.rooms.status
+                    status: br.rooms.status,
+                    uses_nightly_rates: br.uses_nightly_rates || false,
+                    nightly_rates: br.nightly_rates ? (typeof br.nightly_rates === 'string' ? JSON.parse(br.nightly_rates) : br.nightly_rates) : null
                      
                 }))
             },

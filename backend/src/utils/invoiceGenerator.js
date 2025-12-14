@@ -59,6 +59,11 @@ handlebars.registerHelper('calculatePax', function(guests) {
     return 1 + additionalCount;  // 1 for primary guest + additional guests
 });
 
+// Helper for multiplication
+handlebars.registerHelper('multiply', function(value1, value2) {
+    return value1 * value2;
+});
+
 handlebars.registerHelper('formatCurrency', function(amount) {
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
@@ -81,45 +86,36 @@ function calculateGST(totalAmount) {
     };
 }
 
-async function generateInvoicePDF(invoiceData) {
+// Function to generate Food Bill PDF
+async function generateFoodBillPDF(foodBillData) {
     let browser = null;
     try {
-        // console.log('Starting PDF generation...');
-        // Define template path
-        const templatePath = path.join(__dirname, 'templates', 'invoice.html');
-        // console.log('Template path:', templatePath);
-
-        // Check if template exists
+        const templatePath = path.join(__dirname, 'templates', 'foodBill.html');
+        
         if (!fs.existsSync(templatePath)) {
-            // console.error('Template file not found at:', templatePath);
-            throw new Error('Invoice template file not found');
+            throw new Error('Food bill template file not found');
         }
 
         const templateHtml = fs.readFileSync(templatePath, 'utf-8');
-        // console.log('Template HTML length:', templateHtml.length);
-
-        // Calculate split GST amounts from booking total amount
-        const totalAmount = parseFloat(invoiceData.booking.total_amount);
+        
+        // Calculate GST for food
+        const totalAmount = parseFloat(foodBillData.foodOrder.total_amount);
         const { baseAmount, cgstAmount, sgstAmount } = calculateGST(totalAmount);
         
-        // Compile template with data - using amounts from booking table
         const template = handlebars.compile(templateHtml);
         const finalHtml = template({
-            ...invoiceData,
-            calculatedAmounts: {
+            ...foodBillData,
+            foodCalculations: {
                 baseAmount,
                 cgstAmount,
                 sgstAmount
-            }
+            },
+            currentDate: new Date().toISOString()
         });
 
-        // console.log('Final HTML length:', finalHtml.length);
-
-        // Launch Puppeteer with necessary configurations
-        
         browser = await puppeteer.launch({
             headless: 'new',
-            executablePath:undefined, 
+            executablePath: undefined,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -128,26 +124,17 @@ async function generateInvoicePDF(invoiceData) {
             ]
         });
 
-         console.log('Puppeteer launched successfully');
-
         const page = await browser.newPage();
-
-        // Set viewport for consistent rendering
         await page.setViewport({
             width: 1200,
             height: 1600,
             deviceScaleFactor: 2
         });
 
-        // Set content and wait for network idle
-        // console.log('Setting page content...');
         await page.setContent(finalHtml, {
             waitUntil: 'networkidle0'
         });
 
-        // console.log('Page content set, generating PDF...');
-
-        // Generate PDF with compact settings
         const pdf = await page.pdf({
             format: 'A4',
             margin: {
@@ -158,26 +145,136 @@ async function generateInvoicePDF(invoiceData) {
             },
             printBackground: true,
             preferCSSPageSize: true,
-            timeout: 60000, // 60 second timeout
+            timeout: 60000,
             displayHeaderFooter: false,
-            scale: 0.95 // Slightly scale down content to fit better
+            scale: 0.95
+        });
+
+        return pdf;
+    } catch (error) {
+        throw new Error('Food bill PDF generation failed: ' + error.message);
+    } finally {
+        if (browser !== null) {
+            try {
+                await browser.close();
+            } catch (closeError) {
+                console.error('Error closing browser:', closeError);
+            }
+        }
+    }
+}
+
+async function generateInvoicePDF(invoiceData, foodBillData = null) {
+    let browser = null;
+    try {
+        // Load room invoice template
+        const roomTemplatePath = path.join(__dirname, 'templates', 'invoice.html');
+        
+        if (!fs.existsSync(roomTemplatePath)) {
+            throw new Error('Invoice template file not found');
+        }
+
+        const roomTemplateHtml = fs.readFileSync(roomTemplatePath, 'utf-8');
+
+        // Calculate split GST amounts from booking total amount
+        const totalAmount = parseFloat(invoiceData.booking.total_amount);
+        const { baseAmount, cgstAmount, sgstAmount } = calculateGST(totalAmount);
+        
+        // Compile room invoice template
+        const roomTemplate = handlebars.compile(roomTemplateHtml);
+        const roomHtml = roomTemplate({
+            ...invoiceData,
+            calculatedAmounts: {
+                baseAmount,
+                cgstAmount,
+                sgstAmount
+            }
+        });
+
+        // Prepare combined HTML
+        let combinedHtml = roomHtml;
+
+        // If food bill data exists, add food bill page
+        if (foodBillData) {
+            const foodTemplatePath = path.join(__dirname, 'templates', 'foodBill.html');
+            
+            if (fs.existsSync(foodTemplatePath)) {
+                const foodTemplateHtml = fs.readFileSync(foodTemplatePath, 'utf-8');
+                
+                // Calculate GST for food
+                const foodTotal = parseFloat(foodBillData.foodOrder.total_amount);
+                const foodGST = calculateGST(foodTotal);
+                
+                const foodTemplate = handlebars.compile(foodTemplateHtml);
+                const foodHtml = foodTemplate({
+                    ...foodBillData,
+                    foodCalculations: {
+                        baseAmount: foodGST.baseAmount,
+                        cgstAmount: foodGST.cgstAmount,
+                        sgstAmount: foodGST.sgstAmount
+                    },
+                    currentDate: new Date().toISOString()
+                });
+
+                // Combine both pages - room invoice first, then food bill
+                combinedHtml = roomHtml + foodHtml;
+            }
+        }
+
+        // Launch Puppeteer
+        browser = await puppeteer.launch({
+            headless: 'new',
+            executablePath: undefined, 
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--font-render-hinting=none'
+            ]
+        });
+
+        // console.log('Puppeteer launched successfully');
+
+        const page = await browser.newPage();
+
+        await page.setViewport({
+            width: 1200,
+            height: 1600,
+            deviceScaleFactor: 2
+        });
+
+        await page.setContent(combinedHtml, {
+            waitUntil: 'networkidle0'
+        });
+
+        // Generate single PDF with multiple pages
+        const pdf = await page.pdf({
+            format: 'A4',
+            margin: {
+                top: '15px',
+                right: '15px',
+                bottom: '15px',
+                left: '15px'
+            },
+            printBackground: true,
+            preferCSSPageSize: true,
+            timeout: 60000,
+            displayHeaderFooter: false,
+            scale: 0.95
         });
 
         // console.log('PDF generated successfully, size:', pdf.length);
 
         return pdf;
     } catch (error) {
-        // console.error('Error generating PDF:', error);
-        // console.error('Error stack:', error.stack);
+        console.error('Error generating PDF:', error);
         throw new Error('PDF generation failed: ' + error.message);
     } finally {
-        // Close browser if it was initialized
         if (browser !== null) {
             try {
                 await browser.close();
-                // console.log('Browser closed successfully');
             } catch (closeError) {
-                // console.error('Error closing browser:', closeError);
+                console.error('Error closing browser:', closeError);
             }
         }
     }

@@ -185,16 +185,44 @@ import {
 } from 'lucide-react';
 
 const features = [
-  {
-    name: 'Reservation Management',
+
+   {
+    name: 'Hotel Management',
     description:
-      'Manage bookings across multiple channels, prevent overbooking, and optimize room allocation automatically.',
+      'Manage bookings across multiple channels, prevent overbooking, and optimize room allocation automatically.Smooth room operations from check-in to checkout',
     icon: Calendar,
     details: [
-      'Real-time availability updates',
-      'Multi-channel booking sync',
-      'Automated confirmation emails',
-      'Group booking management',
+    
+
+`Room availability & allocation management`,
+
+`Fast check-in and check-out process`,
+
+`Automatic room billing`,
+
+`Room-wise food order linking`,
+
+`Live room status tracking`,
+
+
+    ],
+  },
+  {
+    name: 'Restaurant Management',
+    description:
+      'Manage bookings across multiple channels, prevent overbooking, and optimize table allocation automatically.End-to-end restaurant operations, fully automated',
+    icon: Calendar,
+    details: [
+      `Table-wise food ordering`,
+
+`Waiter to kitchen direct order flow`,
+
+`Automatic KOT generation`,
+
+`Live order status (Preparing / Ready / Served)`,
+
+`Clear table & order visibility`,
+    
     ],
   },
   {
@@ -210,28 +238,36 @@ const features = [
     ],
   },
   {
-    name: 'Housekeeping',
+    name: 'Smart Billing (Hotel + Restaurant)',
     description:
-      'Streamline cleaning operations, track room status, and manage maintenance requests efficiently.',
+      'One-click billing, full clarity',
     icon: ClipboardCheck,
     details: [
-      'Room status tracking',
-      'Cleaning schedule automation',
-      'Maintenance request handling',
-      'Inventory management',
+    `Separate restaurant bill & room bill`,
+
+`Room + food bill combined automatically`,
+
+`One-click print (separate pages)`,
+
+`Multiple payment modes`,
+
+`Complete payment records`,
     ],
   },
   {
-    name: 'Billing & Payments',
+    name: 'In-Room Food Ordering',
     description:
-      'Process payments securely, manage invoices, and handle multiple payment methods with ease.',
+      'Premium experience for room guests',
     icon: CreditCard,
     details: [
-      'Secure payment processing',
-      'Multiple payment methods',
-      'Automated invoicing',
-      'Split billing support',
-    ],
+      `Guests order food directly from rooms`,
+
+`Instant KOT sent to kitchen`,
+
+`Food bill auto-added to room bill`,
+
+`Full order & billing tracking`,
+    ]
   },
   {
     name: 'Analytics & Reports',
@@ -239,10 +275,14 @@ const features = [
       'Get insights into your business performance with detailed reports and analytics.',
     icon: BarChart2,
     details: [
-      'Occupancy analytics',
-      'Revenue forecasting',
-      'Performance metrics',
-      'Custom report builder',
+      `Hotel revenue reports`,
+
+`Restaurant sales reports`,
+
+`Combined hotel + restaurant summary`,
+`Date-wise transactions & trends`,
+
+`Inventory consumption reports`
     ],
   },
   {
@@ -307,7 +347,9 @@ export const FeaturesList = () => {
             </span>
           </h2>
           <p className="mt-6 text-lg leading-8 text-gray-400">
-            Our comprehensive suite of features helps you manage every aspect of
+            Our comprehensi  'Multi-channel booking sync',
+      'Automated confirmation emails',
+      'Group booking management',ve suite of features helps you manage every aspect of
             your hotel operations efficiently.
           </p>
         </motion.div>

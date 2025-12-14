@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { Dialog, Transition } from '@headlessui/react';
 import { toast } from 'react-hot-toast';
 import RefundModal from '../components/Booking/RefundModal';
+import FoodPaymentModal from '../components/FoodOrder/FoodPaymentModal';
 import {
   RiAddLine,
   RiSearchLine,
@@ -39,7 +40,14 @@ const BookingManagement = () => {
   const [newAmount, setNewAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('Cash');
 
-  // Function to refresh bookings data and notify room status changes
+  // Food payment state
+  const [showFoodPaymentModal, setShowFoodPaymentModal] = useState(false);
+  const [selectedBookingForFoodPayment, setSelectedBookingForFoodPayment] = useState(null);
+  const [foodPaymentAmount, setFoodPaymentAmount] = useState('');
+  const [foodPaymentMode, setFoodPaymentMode] = useState('Cash');
+  const [foodOrderData, setFoodOrderData] = useState(null);
+  const [bookingFoodOrders, setBookingFoodOrders] = useState({});
+
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -57,6 +65,31 @@ const BookingManagement = () => {
       // console.log('Fetched bookings data:', data);
       if (Array.isArray(data)) {
         setBookings(data);
+        
+        // Check food orders for all bookings
+        const foodOrdersMap = {};
+        await Promise.all(data.map(async (booking) => {
+          try {
+            const orderRes = await axios.get(
+              `${BASE_URL}/api/food-orders/booking/${booking.booking_id}/details`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (orderRes.data?.order) {
+              foodOrdersMap[booking.booking_id] = true;
+            }
+          } catch (err) {
+            // No order exists
+            foodOrdersMap[booking.booking_id] = false;
+          }
+        }));
+        setBookingFoodOrders(foodOrdersMap);
+        
+        // Debug: Log all booking statuses
+        // console.log('🔍 Booking Statuses:');
+        data.forEach((b, idx) => {
+          // console.log(`  ${idx + 1}. Booking ${b.booking_id}: status="${b.status}" | toLowerCase="${b.status?.toLowerCase()}"`);
+        });
+        
         if (data.length === 0) {
           setError('No bookings found. Create a new booking to get started.');
         }
@@ -425,13 +458,130 @@ const BookingManagement = () => {
     }
   };
 
+  // Food Order functions
+  const checkExistingOrder = async (bookingId) => {
+    setCheckingOrder(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${BASE_URL}/api/food-orders/check/${bookingId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log('Order Check Result:', response.data);
+      setExistingOrder(response.data?.order || null);
+    } catch (err) {
+      console.error('Error checking order:', err);
+      setExistingOrder(null);
+    } finally {
+      setCheckingOrder(false);
+    }
+  };
+
+  const handleOpenFoodModal = async (booking) => {
+    try {
+      // Check if booking status is "checkin"
+      // console.log('🍽️  Food Order - Checking booking status:', booking.status);
+      const validStatuses = ['checkin', 'checked-in', 'checked in'];
+      
+      if (!validStatuses.includes(booking.status?.toLowerCase())) {
+        console.warn('⚠️  Cannot order food - booking status is:', booking.status);
+        toast.error(`Food orders only available for checked-in bookings. Current status: ${booking.status}`);
+        return;
+      }
+
+      // console.log('✅ Booking status is "checked-in" - navigating to food order page');
+      // Navigate to the food order page
+      navigate(`/booking/${booking.booking_id}/order-food`);
+    } catch (err) {
+      console.error('Error navigating to food order page:', err);
+      toast.error('Failed to open food order page');
+    }
+  };
+
+  // Handle Food Payment
+  const handleOpenFoodPaymentModal = async (booking) => {
+    try {
+      // Check booking status first
+      const validStatuses = ['checkin', 'checked-in', 'checked in'];
+      if (!validStatuses.includes(booking.status?.toLowerCase())) {
+        toast.error(`Cannot process food payment. Booking status is: ${booking.status}`);
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      
+      // Fetch food order details
+      const orderRes = await axios.get(
+        `${BASE_URL}/api/food-orders/booking/${booking.booking_id}/details`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (orderRes.data?.order) {
+        setFoodOrderData(orderRes.data.order);
+        setSelectedBookingForFoodPayment(booking);
+        setFoodPaymentAmount('');
+        setFoodPaymentMode('Cash');
+        setShowFoodPaymentModal(true);
+      } else {
+        toast.error('No food order found for this booking');
+      }
+    } catch (err) {
+      console.error('Error fetching food order:', err);
+      toast.error('Failed to load food order details');
+    }
+  };
+
+  const handleFoodPaymentSubmit = async () => {
+    if (!foodPaymentAmount || parseFloat(foodPaymentAmount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    const amountDue = foodOrderData.amount_due || 0;
+    if (parseFloat(foodPaymentAmount) > amountDue) {
+      toast.error('Payment amount cannot exceed due amount');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const amount = parseFloat(foodPaymentAmount);
+
+      // Record food payment using new API
+      const paymentRes = await axios.post(
+        `${BASE_URL}/api/food-payments/record`,
+        {
+          food_order_id: foodOrderData.id,
+          amount,
+          payment_mode: foodPaymentMode,
+          notes: `Payment recorded for Booking #${selectedBookingForFoodPayment.booking_id}`
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // console.log('🎉 Food payment recorded:', paymentRes.data);
+      toast.success(`Food payment of ₹${amount.toFixed(2)} recorded successfully`);
+      
+      setShowFoodPaymentModal(false);
+      setFoodPaymentAmount('');
+      fetchBookings();
+    } catch (err) {
+      console.error('Error processing food payment:', err);
+      toast.error(err.response?.data?.message || 'Failed to process food payment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  
   return (
     <div className="booking-management">
       {/* Header Section */}
-      <div className="header">
+      {/* <div className="header">
         <h1>Booking Management</h1>
 
-      </div>
+      </div> */}
       <div>
     
       </div>
@@ -537,6 +687,8 @@ const BookingManagement = () => {
                 <th>Amount Paid</th>
                 <th>Amount Due</th>
                 <th>Add payment</th>
+                <th>Order Food</th>
+                <th>Pay Food</th>
                 <th>Bill</th>
                 <th>Actions</th>
                 
@@ -606,6 +758,36 @@ const BookingManagement = () => {
                       }
                     >
                       Add Payment
+                    </button>
+                  </td>
+                  <td data-test="order-food-column">
+                    <button
+                      onClick={() => handleOpenFoodModal(booking)}
+                      className={bookingFoodOrders[booking.booking_id] ? "edit-food-btn" : "order-food-btn"}
+                      disabled={!['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase())}
+                      title={
+                        !['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase())
+                          ? `Food order only available for checked-in bookings (Current status: ${booking.status})`
+                          : bookingFoodOrders[booking.booking_id] ? 'Edit Food Order' : 'Order Food'
+                      }
+                    >
+                      <span>{bookingFoodOrders[booking.booking_id] ? '📝 Edit Food' : '🍽️ Order Food'}</span>
+                    </button>
+                  </td>
+                  <td data-test="pay-food-column">
+                    <button
+                      onClick={() => handleOpenFoodPaymentModal(booking)}
+                      className="pay-food-btn"
+                      disabled={!['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase()) || !bookingFoodOrders[booking.booking_id]}
+                      title={
+                        !['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase())
+                          ? `Food payment only available for checked-in bookings (Current status: ${booking.status})`
+                          : !bookingFoodOrders[booking.booking_id]
+                          ? 'No food order exists for this booking'
+                          : 'Add payment for food order'
+                      }
+                    >
+                      💳 Pay Food
                     </button>
                   </td>
                   <td>
@@ -977,6 +1159,25 @@ const BookingManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Food Order Modal */}
+      <FoodPaymentModal
+        isOpen={showFoodPaymentModal}
+        onClose={() => {
+          setShowFoodPaymentModal(false);
+          setFoodPaymentAmount('');
+          setSelectedBookingForFoodPayment(null);
+          setFoodOrderData(null);
+        }}
+        onSubmit={handleFoodPaymentSubmit}
+        booking={selectedBookingForFoodPayment}
+        foodOrder={foodOrderData}
+        paymentAmount={foodPaymentAmount}
+        setPaymentAmount={setFoodPaymentAmount}
+        paymentMode={foodPaymentMode}
+        setPaymentMode={setFoodPaymentMode}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 };

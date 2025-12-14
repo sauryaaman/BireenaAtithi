@@ -42,6 +42,9 @@ const Login = () => {
         // Store the token in localStorage
         localStorage.setItem('token', data.token);
         
+        // Clear staff flag for regular user login
+        localStorage.removeItem('isStaff');
+        
         // Redirect to dashboard
         navigate('/dashboard');
       } catch (error) {

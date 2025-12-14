@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, LogIn, Mail } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Mail, Phone } from 'lucide-react';
 import { Button } from '../../components/ui';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -10,8 +10,10 @@ export const LoginPage = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
+    phone: '',
     password: '',
   });
+  const [loginType, setLoginType] = useState('user'); // 'user' or 'staff'
   const [forgotEmail, setForgotEmail] = useState('');
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -20,11 +22,19 @@ export const LoginPage = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Enter a valid email address';
+    // Email or Phone validation depending on login type
+    if (loginType === 'user') {
+      if (!formData.email) {
+        newErrors.email = 'Email is required';
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = 'Enter a valid email address';
+      }
+    } else {
+      if (!formData.phone) {
+        newErrors.phone = 'Phone is required';
+      } else if (!/^\d{10}$/.test(formData.phone)) {
+        newErrors.phone = 'Phone must be 10 digits';
+      }
     }
 
     // Password validation
@@ -64,10 +74,16 @@ export const LoginPage = () => {
     setIsLoading(true);
     setErrors({});
     try {
-      const response = await fetch(`${BASE_URL}/api/users/login`, {
+      // choose endpoint based on login type
+      const endpoint = loginType === 'staff' ? `${BASE_URL}/api/staff/login` : `${BASE_URL}/api/users/login`;
+      const body = loginType === 'staff'
+        ? { phone: formData.phone, password: formData.password }
+        : { email: formData.email, password: formData.password };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, password: formData.password }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
@@ -76,8 +92,64 @@ export const LoginPage = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store token and navigate to dashboard (same as pages/Login.jsx)
+      // Store token and permissions (if returned), then navigate to dashboard
       localStorage.setItem('token', data.token);
+      
+      // Set isStaff flag
+      if (loginType === 'staff') {
+        localStorage.setItem('isStaff', 'true');
+      } else {
+        localStorage.removeItem('isStaff');
+      }
+      
+      // If login returned a staff or user object with permissions, persist them for frontend-only checks
+      try {
+        const perms = data?.staff?.permissions || data?.user?.permissions || data?.permissions;
+        if (perms) {
+          localStorage.setItem('permissions', JSON.stringify(perms));
+          // If staff object already contains owner info, save it
+          if (data?.staff?.created_by) {
+            localStorage.setItem('owner_id', String(data.staff.created_by));
+          }
+        } else {
+          // If this was a staff login and no permissions were returned, try fetching staff profile as a fallback
+          if (loginType === 'staff') {
+            try {
+              const resp = await fetch(`${BASE_URL}/api/staff/profile`, {
+                headers: { Authorization: `Bearer ${data.token}` }
+              });
+              if (resp.ok) {
+                const staffProfile = await resp.json();
+                const fallbackPerms = staffProfile?.permissions;
+                if (fallbackPerms) {
+                  localStorage.setItem('permissions', JSON.stringify(fallbackPerms));
+                  // persist owner id from staff profile
+                  if (staffProfile?.created_by) {
+                    localStorage.setItem('owner_id', String(staffProfile.created_by));
+                  }
+                }
+                // also persist owner id even if no perms
+                if (staffProfile?.created_by && !localStorage.getItem('owner_id')) {
+                  localStorage.setItem('owner_id', String(staffProfile.created_by));
+                }
+              }
+            } catch (e) {
+              // ignore fallback errors — leave permissions unset
+            }
+          } else {
+            // clear any leftover permissions for admin logins
+            localStorage.removeItem('permissions');
+            // persist admin owner id if returned by response
+            if (data?.user?.user_id) {
+              localStorage.setItem('owner_id', String(data.user.user_id));
+            } else {
+              localStorage.removeItem('owner_id');
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
       navigate('/dashboard');
     } catch (err) {
       setErrors({ auth: err.message || 'Login failed' });
@@ -243,7 +315,43 @@ export const LoginPage = () => {
         </form> */}
 
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            {/* Admin / Staff toggle (keeps visual design minimal and consistent) */}
+            <div className="flex gap-8 mb-4 items-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType('user');
+                  setErrors({});
+                  setFormData((p) => ({ ...p, phone: '', password: '' }));
+                }}
+                aria-pressed={loginType === 'user'}
+                className={
+                  loginType === 'user'
+                    ? 'text-lg font-semibold text-slate-100 border-b-2 border-cyan-500 pb-2 px-1'
+                    : 'text-lg text-slate-400 px-1'
+                }
+              >
+                Admin
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType('staff');
+                  setErrors({});
+                  setFormData((p) => ({ ...p, email: '', password: '' }));
+                }}
+                aria-pressed={loginType === 'staff'}
+                className={
+                  loginType === 'staff'
+                    ? 'text-lg font-semibold text-slate-100 border-b-2 border-cyan-500 pb-2 px-1'
+                    : 'text-lg text-slate-400 px-1'
+                }
+              >
+                Staff
+              </button>
+            </div>
           {errors.auth && (
             <div className="rounded-lg bg-red-900/20 border border-red-500/50 p-4 text-sm text-red-400 backdrop-blur-sm">
               {errors.auth}
@@ -252,31 +360,53 @@ export const LoginPage = () => {
 
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-slate-300"
-              >
-                Email Address
-              </label>
-              <div className="relative mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`block w-full rounded-lg border ${
-                    errors.email
-                      ? 'border-red-500 bg-red-900/20'
-                      : 'border-slate-700 bg-slate-800/50'
-                  } px-4 py-3 pl-11 text-slate-200 placeholder-slate-400 shadow-sm transition-colors focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 backdrop-blur-sm`}
-                />
-                <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-400">{errors.email}</p>
-                )}
-              </div>
+              {loginType === 'user' ? (
+                <>
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-300">
+                    Email Address
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`block w-full rounded-lg border ${
+                        errors.email
+                          ? 'border-red-500 bg-red-900/20'
+                          : 'border-slate-700 bg-slate-800/50'
+                      } px-4 py-3 pl-11 text-slate-200 placeholder-slate-400 shadow-sm transition-colors focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 backdrop-blur-sm`}
+                    />
+                    <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                    {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email}</p>}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label htmlFor="phone" className="block text-sm font-medium text-slate-300">
+                    Phone Number
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="Enter your 10-digit phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className={`block w-full rounded-lg border ${
+                        errors.phone
+                          ? 'border-red-500 bg-red-900/20'
+                          : 'border-slate-700 bg-slate-800/50'
+                      } px-4 py-3 pl-11 text-slate-200 placeholder-slate-400 shadow-sm transition-colors focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 backdrop-blur-sm`}
+                    />
+                    <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                    {errors.phone && <p className="mt-1 text-sm text-red-400">{errors.phone}</p>}
+                  </div>
+                </>
+              )}
             </div>
 
             <div>

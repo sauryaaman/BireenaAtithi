@@ -1,48 +1,3 @@
-// import { motion } from 'framer-motion';
-
-// export const HeroSection = () => {
-//   return (
-//     <section className="relative overflow-hidden bg-gradient-to-r from-white via-white to-gradient-red/5 py-24 sm:py-32">
-//       <div className="container relative">
-//         <div className="grid grid-cols-1 gap-x-8 gap-y-16 lg:grid-cols-2 lg:items-center">
-//           <motion.div
-//             initial={{ opacity: 0, y: 20 }}
-//             animate={{ opacity: 1, y: 0 }}
-//             transition={{ duration: 0.5 }}
-//             className="max-w-2xl"
-//           >
-//             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-//               Powerful Features
-//             </h2>
-//             <h1 className="mt-3 text-4xl font-bold tracking-tight text-dark sm:text-5xl">
-//               Everything You Need to Run Your Hotel
-//             </h1>
-//             <p className="mt-6 text-xl leading-8 text-dark/70">
-//               From front desk operations to financial reporting, Bireena Athiti
-//               provides all the tools you need to manage your property
-//               efficiently and deliver exceptional guest experiences.
-//             </p>
-//           </motion.div>
-//           <motion.div
-//             initial={{ opacity: 0, x: 50 }}
-//             animate={{ opacity: 1, x: 0 }}
-//             transition={{ duration: 0.7 }}
-//             className="relative"
-//           >
-//             <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-primary/5">
-//               <img
-//                 src="/features/dashboard-preview.jpg"
-//                 alt="Dashboard Preview"
-//                 className="w-full object-cover"
-//               />
-//             </div>
-//           </motion.div>
-//         </div>
-//       </div>
-//     </section>
-//   );
-// };
-
 
 import { motion } from 'framer-motion';
 
@@ -81,7 +36,7 @@ export const HeroSection = () => {
             >
               Everything You Need to{' '}
               <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Run Your Hotel
+                Run Your Hotel & Restaurant
               </span>
             </motion.h1>
             
@@ -106,7 +61,7 @@ export const HeroSection = () => {
             {/* Glow Effect */}
             <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 opacity-0 blur-2xl transition-all duration-500 group-hover:opacity-70" />
             
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-cyan-500/20 bg-slate-900/50 backdrop-blur-sm transition-all duration-500 group-hover:border-cyan-500/40 group-hover:bg-slate-900/60">
+            <div className="relative rounded-2xl border border-cyan-500/20 bg-slate-900/50 backdrop-blur-sm transition-all duration-500 group-hover:border-cyan-500/40 group-hover:bg-slate-900/60 p-4">
               {/* Background gradient */}
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-transparent to-transparent opacity-50 transition-opacity duration-500 group-hover:opacity-70" />
               
@@ -114,9 +69,9 @@ export const HeroSection = () => {
               <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-all duration-700 group-hover:translate-x-[100%] group-hover:opacity-100" />
               
               <img
-                src="/features/dashboard-preview.jpg"
+                src="/cashier report image.png"
                 alt="Dashboard Preview"
-                className="w-full object-cover transition-all duration-500 group-hover:scale-105"
+                className="relative z-10 w-full h-auto rounded-lg transition-all duration-500 group-hover:scale-105"
               />
               
               {/* Image overlays */}

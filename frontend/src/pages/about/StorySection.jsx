@@ -94,7 +94,7 @@ export const StorySection = () => {
               </h2>
               <p className="mt-6 text-lg leading-8 text-gray-400">
                 Launched in 2025, Bireena Athiti was born from the need to
-                simplify complex hotel operations. Our name combines "Bireena"
+                simplify complex hotel and restaurent operations. Our name combines "Bireena"
                 (excellence) and "Athiti" (guest), reflecting our mission to
                 elevate hospitality management through technology.
               </p>
@@ -110,14 +110,14 @@ export const StorySection = () => {
               <div className="relative space-y-6">
                 <p className="text-gray-400">
                   What began as a simple booking system has evolved into a
-                  comprehensive hotel management platform. We've continuously
+                  comprehensive hotel and restaurant management platform. We've continuously
                   added features and capabilities based on real feedback from
-                  hoteliers and hospitality professionals, ensuring our solution
+                  hospitality professionals, ensuring our solution
                   addresses actual industry needs.
                 </p>
                 <p className="text-gray-400">
-                  Today, Bireena Athiti powers hundreds of hotels across India and
-                  beyond, streamlining everything from reservations and room
+                  Today, Bireena Athiti powers fifties of hotels and restaurant across India and
+                  beyond, streamlining everything from reservations and room &  restaurant
                   management to staff coordination and financial reporting. Our
                   platform brings modern efficiency while preserving the personal
                   touch that makes hospitality special.
@@ -141,7 +141,7 @@ export const StorySection = () => {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
               
               <img
-                src="/about/dashboard.jpg"
+                src="/2.png"
                 alt="Bireena Athiti Dashboard"
                 className="relative w-full rounded-xl object-cover shadow-2xl"
               />

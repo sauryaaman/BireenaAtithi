@@ -245,7 +245,9 @@ export const Hero = () => {
                 animation: 'fadeInUp 0.6s ease-out 0.3s forwards',
               }}
             >
-              Discover exquisite cuisine in an elegant atmosphere. Our expert chefs create unforgettable dining experiences with the finest ingredients.
+              All-in-one hotel management software
+              designed for seamless check-in, check-out, food ordering,
+              billing, and real-time reporting.
             </p>
 
             <div

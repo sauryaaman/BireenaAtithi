@@ -74,9 +74,9 @@ async function validateRoomAvailability(roomIds, checkin_date, checkout_date) {
 // Create a new booking
 async function createBooking(req, res) {
     try {
-        console.log('========= CREATE BOOKING START =========');
-        console.log('Request body:', JSON.stringify(req.body, null, 2));
-        console.log('Nightly rates received:', req.body.nightly_rates);
+        // console.log('========= CREATE BOOKING START =========');
+        // console.log('Request body:', JSON.stringify(req.body, null, 2));
+        // console.log('Nightly rates received:', req.body.nightly_rates);
         
         const {
             primary_guest,
@@ -226,16 +226,16 @@ async function createBooking(req, res) {
                         throw new Error('Booking creation failed - no data returned');
                     }
 
-                    console.log('Supabase Insert Response:', JSON.stringify(booking, null, 2));
-                    console.log('Created Booking Details:', {
-                        booking_id: booking.booking_id,
-                        cust_id: booking.cust_id,
-                        room_id: booking.room_id,
-                        checkin_date: booking.checkin_date,
-                        checkout_date: booking.checkout_date,
-                        status: booking.status,
-                        nightly_rates: booking.nightly_rates
-                    });
+                    // console.log('Supabase Insert Response:', JSON.stringify(booking, null, 2));
+                    // console.log('Created Booking Details:', {
+                    //     booking_id: booking.booking_id,
+                    //     cust_id: booking.cust_id,
+                    //     room_id: booking.room_id,
+                    //     checkin_date: booking.checkin_date,
+                    //     checkout_date: booking.checkout_date,
+                    //     status: booking.status,
+                    //     nightly_rates: booking.nightly_rates
+                    // });
                     createdBooking = booking; // Save to outer scope variable
 
                     // Create payment transaction if amount_paid > 0
@@ -273,7 +273,7 @@ async function createBooking(req, res) {
                     nightly_rates: room.uses_nightly_rates ? room.nightly_rates : null
                 }));
 
-                console.log('Creating booking rooms entries with rate info:', JSON.stringify(bookingRooms, null, 2));
+                // console.log('Creating booking rooms entries with rate info:', JSON.stringify(bookingRooms, null, 2));
 
                 const { data: createdBookingRooms, error: bookingRoomsError } = await supabase
                     .from('booking_rooms')
@@ -370,7 +370,7 @@ async function createBooking(req, res) {
                 total_amount: createdBooking.total_amount
             };
 
-            console.log('Final booking details in Supabase:', JSON.stringify(responseData, null, 2));
+            // console.log('Final booking details in Supabase:', JSON.stringify(responseData, null, 2));
             
             // Send successful response
             res.status(201).json(responseData);
@@ -808,8 +808,75 @@ async function downloadInvoice(req, res) {
 
         const { generateInvoicePDF } = require('../utils/invoiceGenerator');
 
-        // Generate PDF using the invoice details
-        const pdfBuffer = await generateInvoicePDF(invoiceDetailsResponse);
+        // Check if food order exists for this booking
+        let foodBillData = null;
+        try {
+            const { data: foodOrderData, error: foodOrderError } = await supabase
+                .from('food_orders')
+                .select(`
+                    *,
+                    food_order_items (
+                        *,
+                        menu_items (name, price)
+                    )
+                `)
+                .eq('booking_id', booking_id)
+                .single();
+
+            if (!foodOrderError && foodOrderData) {
+                // console.log('Food order found, will include in invoice...');
+                
+                // Get food payment transactions
+                const { data: foodPayments } = await supabase
+                    .from('food_payment_transactions')
+                    .select('*')
+                    .eq('food_order_id', foodOrderData.id)
+                    .order('created_at', { ascending: false });
+
+                // Format food items
+                const foodItems = foodOrderData.food_order_items.map(item => ({
+                    name: item.menu_items?.name || 'Unknown Item',
+                    price: item.price,
+                    quantity: item.quantity
+                }));
+
+                // Get room numbers from invoice response
+                const roomNumbers = invoiceDetailsResponse.booking?.rooms
+                    ?.map(r => r.room_number)
+                    .join(', ') || 'N/A';
+
+                // Prepare food bill data with hotel details from invoice response
+                const hotel = invoiceDetailsResponse.hotel || {};
+                const fullAddress = [
+                    hotel.address_line1,
+                    hotel.city,
+                    hotel.state,
+                    hotel.country,
+                    hotel.pin_code
+                ].filter(Boolean).join(', ');
+
+                foodBillData = {
+                    booking_id: booking_id,
+                    hotelName: hotel.hotel_name || 'N/A',
+                    hotelLogo: hotel.hotel_logo_url || null,
+                    hotelAddress: fullAddress || 'N/A',
+                    hotelPhone: invoiceDetailsResponse.hotelPhone || 'N/A',
+                    hotelEmail: invoiceDetailsResponse.hotelEmail || 'N/A',
+                    hotelGSTIN: hotel.gst_number || 'N/A',
+                    customer: invoiceDetailsResponse.customer,
+                    roomNumbers: roomNumbers,
+                    foodOrder: foodOrderData,
+                    foodItems: foodItems,
+                    foodPaymentTransactions: foodPayments || []
+                };
+            }
+        } catch (foodError) {
+            // console.log('No food order found or error fetching:', foodError.message);
+            // Continue with just room invoice
+        }
+
+        // Generate combined PDF (room invoice + food bill if exists)
+        const pdfBuffer = await generateInvoicePDF(invoiceDetailsResponse, foodBillData);
 
         // Check if PDF buffer is valid
         if (!pdfBuffer || pdfBuffer.length === 0) {
@@ -937,6 +1004,34 @@ async function getInvoiceDetails(req, res) {
         const primaryGuest = booking.booking_guests.find(g => g.is_primary) || {};
         const additionalGuests = booking.booking_guests.filter(g => !g.is_primary) || [];
 
+        // Parse nightly_rates if available
+        // console.log('=== NIGHTLY RATES DEBUG ===');
+        // console.log('booking.nightly_rates:', JSON.stringify(booking.nightly_rates, null, 2));
+        
+        // Group nightly rates by room_id: { room_id: [rate1, rate2, rate3] }
+        const nightlyRatesMap = {};
+        if (booking.nightly_rates && Array.isArray(booking.nightly_rates) && booking.nightly_rates.length > 0) {
+            try {
+                booking.nightly_rates.forEach(nr => {
+                    if (nr.room_id && nr.rate) {
+                        if (!nightlyRatesMap[nr.room_id]) {
+                            nightlyRatesMap[nr.room_id] = [];
+                        }
+                        nightlyRatesMap[nr.room_id].push({
+                            night: nr.night,
+                            rate: nr.rate
+                        });
+                        // console.log(`Room ${nr.room_id}, Night ${nr.night}: ₹${nr.rate}`);
+                    }
+                });
+                // console.log('nightlyRatesMap:', JSON.stringify(nightlyRatesMap, null, 2));
+            } catch (e) {
+                console.error('Error parsing nightly_rates:', e);
+            }
+        } else {
+            // console.log('No nightly_rates found or empty array');
+        }
+
         const invoiceData = {
             // Invoice details
             booking_id: booking.booking_id,
@@ -966,11 +1061,52 @@ async function getInvoiceDetails(req, res) {
                 amount_paid: booking.amount_paid,
                 amount_due: booking.amount_due,
                 payment_status: booking.payment_status,
-                rooms: booking.booking_rooms.map(br => ({
-                    room_number: br.rooms.room_number,
-                    room_type: br.rooms.room_type,
-                    price_per_night: br.price_per_night || br.rooms.price_per_night
-                }))
+                rooms: booking.booking_rooms.map(br => {
+                    const roomNightlyRates = nightlyRatesMap[br.room_id];
+                    let roomData;
+                    
+                    if (roomNightlyRates && roomNightlyRates.length > 0) {
+                        // Check if all nightly rates are same
+                        const firstRate = roomNightlyRates[0].rate;
+                        const allSameRate = roomNightlyRates.every(nr => nr.rate === firstRate);
+                        
+                        if (allSameRate) {
+                            // All nights have same rate - show as single line
+                            roomData = {
+                                room_number: br.rooms.room_number,
+                                room_type: br.rooms.room_type,
+                                has_nightly_rates: false, // Treat as single rate
+                                price_per_night: firstRate,
+                                total_nights: roomNightlyRates.length,
+                                total_amount: firstRate * roomNightlyRates.length
+                            };
+                            // console.log(`Room ${br.rooms.room_number}: Same rate ₹${firstRate}/night × ${roomNightlyRates.length} nights = ₹${roomData.total_amount}`);
+                        } else {
+                            // Different rates for different nights - show breakdown
+                            roomData = {
+                                room_number: br.rooms.room_number,
+                                room_type: br.rooms.room_type,
+                                has_nightly_rates: true,
+                                nightly_rates: roomNightlyRates.sort((a, b) => a.night - b.night), // Sort by night
+                                total_amount: roomNightlyRates.reduce((sum, nr) => sum + nr.rate, 0)
+                            };
+                            // console.log(`Room ${br.rooms.room_number}: Different nightly rates, Total: ₹${roomData.total_amount}`);
+                        }
+                    } else {
+                        // No nightly rates, use single rate
+                        const singleRate = br.price_per_night || br.rooms.price_per_night;
+                        roomData = {
+                            room_number: br.rooms.room_number,
+                            room_type: br.rooms.room_type,
+                            has_nightly_rates: false,
+                            price_per_night: singleRate,
+                            total_nights: booking.nights
+                        };
+                        // console.log(`Room ${br.rooms.room_number}: Default rate ₹${singleRate}/night × ${booking.nights} nights`);
+                    }
+                    
+                    return roomData;
+                })
             },
             
             // Customer & Guest details
@@ -1007,7 +1143,7 @@ async function addPayment(req, res) {
     try {
         const { booking_id } = req.params;
         const { amount_paid, payment_mode } = req.body;
-    console.log('Adding payment:', { booking_id, amount_paid, payment_mode });
+    // console.log('Adding payment:', { booking_id, amount_paid, payment_mode });
         // Get current booking details
         const { data: booking, error: bookingError } = await supabase
             .from('bookings')
@@ -1060,7 +1196,7 @@ async function addPayment(req, res) {
             }]);
 
         if (transactionError) throw transactionError;
-        console.log('Payment added successfully:', { booking_id, newAmountPaid, newAmountDue, newPaymentStatus,last_payment_date: new Date().toLocaleDateString() });
+        // console.log('Payment added successfully:', { booking_id, newAmountPaid, newAmountDue, newPaymentStatus,last_payment_date: new Date().toLocaleDateString() });
         res.json({
             message: 'Payment added successfully',
             new_amount_paid: newAmountPaid,

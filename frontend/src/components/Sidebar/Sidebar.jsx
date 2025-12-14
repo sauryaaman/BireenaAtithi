@@ -11,6 +11,7 @@ import {
   RiFileAddLine,
   RiLogoutBoxLine,
   RiMoneyDollarCircleLine
+  ,RiSettingsLine
 } from 'react-icons/ri';
 import Navbar from '../Navbar/Navbar';
 import './Sidebar.css';
@@ -41,13 +42,33 @@ const Sidebar = ({ onCollapse }) => {
     fetchHotelDetails();
   }, []);
 
+  // Read frontend-only permissions from localStorage (set at login)
+  const [permissions, setPermissions] = useState(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('permissions');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setPermissions(parsed);
+      } else {
+        setPermissions(null);
+      }
+    } catch (e) {
+      setPermissions(null);
+    }
+  }, []);
+
   const menuItems = [
-    { path: '/dashboard', icon: RiDashboardLine, text: 'Dashboard' },
-    { path: '/rooms', icon: RiHotelLine, text: 'Rooms' },
-    { path: '/bookings', icon: RiCalendarCheckLine, text: 'Bookings' },
-    { path: '/bookings/new', icon: RiFileAddLine, text: 'Add Booking' },
-    { path: '/customers', icon: RiGroupLine, text: 'Customers' },
-    { path: '/cashier-report', icon: RiMoneyDollarCircleLine, text: 'Cashier Report' },
+    { path: '/dashboard', icon: RiDashboardLine, text: 'Dashboard', permKey: null },
+    { path: '/rooms', icon: RiHotelLine, text: 'Rooms', permKey: 'Rooms' },
+    { path: '/bookings', icon: RiCalendarCheckLine, text: 'Bookings', permKey: 'Bookings' },
+    { path: '/menu', icon: RiFileAddLine, text: 'Food Menu', permKey: 'FoodMenu' },
+    { path: '/bookings/new', icon: RiFileAddLine, text: 'Add Booking', permKey: 'Add Bookings' },
+    { path: '/customers', icon: RiGroupLine, text: 'Customers', permKey: 'Customers' },
+    { path: '/settings', icon: RiSettingsLine, text: 'Settings', permKey: 'Users' },
+    { path: '/cashier-report', icon: RiMoneyDollarCircleLine, text: 'Cashier Report', permKey: 'CashierReport' },
+    { path: '/food-payment-report', icon: RiMoneyDollarCircleLine, text: 'Food Payment Report', permKey: 'FoodPaymentReport' },
   ];
 
   const handleCollapse = () => {
@@ -58,6 +79,8 @@ const Sidebar = ({ onCollapse }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('permissions');
+    localStorage.removeItem('owner_id');
     window.location.href = '/login';
   };
 
@@ -83,16 +106,27 @@ const Sidebar = ({ onCollapse }) => {
         </div>
 
         <nav className="sidebar-nav">
-          {menuItems.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <item.icon className="nav-icon" />
-              <span className="nav-text">{item.text}</span>
-            </Link>
-          ))}
+          {menuItems
+            .filter(item => {
+              // Dashboard always visible
+              if (!item.permKey) return true;
+              // If no frontend permissions are present, show all (assume admin)
+              if (!permissions) return true;
+              // Permissions may be stored as object { key: true } or array
+              if (Array.isArray(permissions)) return permissions.includes(item.permKey);
+              if (typeof permissions === 'object') return !!permissions[item.permKey];
+              return true;
+            })
+            .map(item => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+              >
+                <item.icon className="nav-icon" />
+                <span className="nav-text">{item.text}</span>
+              </Link>
+            ))}
         </nav>
 
         <div className="sidebar-footer">

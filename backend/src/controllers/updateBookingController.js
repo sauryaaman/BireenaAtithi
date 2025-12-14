@@ -180,9 +180,10 @@ const updateBooking = async (req, res) => {
                  payment_status.toUpperCase() === 'PARTIAL' ? PAYMENT_STATUS.PARTIAL :
                  PAYMENT_STATUS.UNPAID) : existingBooking.payment_status,
             status,
+            nightly_rates: req.body.nightly_rates || null, // Combined nightly rates from all rooms
             updated_at: new Date().toISOString()
         };
-        console.log('Booking data to update:', bookingUpdateData);
+        // console.log('Booking data to update:', bookingUpdateData);
 
         // Update the booking
         const { error: bookingUpdateError } = await supabase
@@ -258,7 +259,7 @@ const updateBooking = async (req, res) => {
         // Find rooms to be freed (set to Available)
         const roomsToFree = [...currentRoomIds].filter(id => !newRoomIds.has(id));
         if (roomsToFree.length > 0 && roomsToFree.every(id => !isNaN(id) && id > 0)) {
-            console.log('Setting old rooms to Available:', roomsToFree);
+            // console.log('Setting old rooms to Available:', roomsToFree);
             await supabase
                 .from('rooms')
                 .update({ status: ROOM_STATUS.AVAILABLE })
@@ -269,7 +270,7 @@ const updateBooking = async (req, res) => {
         if (validSelectedRooms.length > 0) {
             const validRoomIds = [...newRoomIds].filter(id => !isNaN(id) && id > 0);
             if (validRoomIds.length > 0) {
-                console.log(`Setting new rooms to ${newRoomStatus}:`, validRoomIds);
+                // console.log(`Setting new rooms to ${newRoomStatus}:`, validRoomIds);
                 await supabase
                     .from('rooms')
                     .update({ status: newRoomStatus })
@@ -297,7 +298,9 @@ const updateBooking = async (req, res) => {
         const roomAssignments = selected_rooms.map(room => ({
             booking_id: bookingId,
             room_id: parseInt(room.room_id),
-            price_per_night: roomPrices[room.room_id] // Use price from rooms table
+            price_per_night: roomPrices[room.room_id], // Use price from rooms table
+            uses_nightly_rates: room.uses_nightly_rates || false,
+            nightly_rates: room.uses_nightly_rates ? room.nightly_rates : null // Direct array, no JSON.stringify
         }));
 
         // console.log('Room assignments to insert:', roomAssignments);

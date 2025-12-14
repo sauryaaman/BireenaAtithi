@@ -27,8 +27,8 @@ export const FeaturesPage = () => {
     <div className="min-h-screen bg-slate-950">
       <HeroSection />
       <FeaturesList />
-      <IntegrationSection />
-      <PricingComparison />
+      {/* <IntegrationSection /> */}
+      {/* <PricingComparison /> */}
     </div>
   );
 };

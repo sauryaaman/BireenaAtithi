@@ -357,10 +357,10 @@ const EditProfile = () => {
 
                 <div className="form-actions">
                     <button type="button" onClick={() => navigate('/view-profile')} className="cancel-button">
-                        Cancel
+                        <span>Cancel</span>
                     </button>
                     <button type="submit" className="save-button">
-                        Save Changes
+                        <span>Save Changes</span>
                     </button>
                 </div>
             </form>

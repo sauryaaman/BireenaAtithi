@@ -15,7 +15,7 @@ const ViewBooking = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookingData, setBookingData] = useState(null);
-console.log("bookingId:",bookingId);
+// console.log("bookingId:",bookingId);
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {

@@ -22,6 +22,7 @@ const EditBooking = () => {
     const [removedRooms, setRemovedRooms] = useState([]);
     const [showGuestForms, setShowGuestForms] = useState(false);
     const [bookingType, setBookingType] = useState('book');
+    const [manualPricingMode, setManualPricingMode] = useState({});
 
     // ID proof type options
     const idProofTypes = [
@@ -79,10 +80,6 @@ const EditBooking = () => {
     // Effect to handle date changes
     useEffect(() => {
         if (formData.checkInDate && formData.checkOutDate) {
-            const nights = Math.max(1, Math.ceil(
-                (formData.checkOutDate - formData.checkInDate) / (1000 * 60 * 60 * 24)
-            ));
-            setNumberOfNights(nights);
             calculateTotalAmount();
             
             // Clear available rooms when dates change to force re-searching
@@ -133,7 +130,7 @@ const EditBooking = () => {
             const bookingData = response.data.booking;
             const customerData = response.data.customer;
             const guestsData = response.data.guests;
-             console.log("bookingData", bookingData);
+            //  console.log("bookingData", bookingData);
             // console.log("statusbooking", bookingData.status);
             // console.log("customerData", customerData);
             // console.log("guestsData", guestsData);
@@ -187,7 +184,7 @@ const EditBooking = () => {
                 pin: customerData.address?.pin || '',
                 
                 // Room selections
-                roomSelections: (bookingData.rooms || []).map(room => {
+                roomSelections: (bookingData.rooms || []).map((room, roomIndex) => {
         if (!room) {
             console.error('Invalid room data:', room);
             return null;
@@ -197,14 +194,29 @@ const EditBooking = () => {
         const roomType = room.room_type || '';
         const roomNumber = room.room_number || '';
         const pricePerNight = parseFloat(room.price_per_night) || 0;
+        
+        // Check if room has nightly rates
+        const usesNightlyRates = room.uses_nightly_rates || false;
+        const nightlyRates = usesNightlyRates && room.nightly_rates ? 
+            room.nightly_rates.map(nr => parseFloat(nr.rate) || 0) : [];
 
         // Store complete room data for existing rooms
         const originalData = {
             room_id: roomId,
             room_type: roomType,
             room_number: roomNumber,
-            price_per_night: pricePerNight
+            price_per_night: pricePerNight,
+            uses_nightly_rates: usesNightlyRates,
+            nightly_rates: room.nightly_rates
         };
+
+        // Calculate total price for existing room
+        let totalPrice = 0;
+        if (usesNightlyRates && nightlyRates.length > 0) {
+            totalPrice = nightlyRates.reduce((sum, rate) => sum + rate, 0);
+        } else {
+            totalPrice = pricePerNight * nights;
+        }
 
         // Create a room selection with all necessary data
         return {
@@ -212,10 +224,14 @@ const EditBooking = () => {
             roomType: roomType,
             roomNumber: roomNumber,
             price_per_night: pricePerNight,
+            uses_nightly_rates: usesNightlyRates, // Add this property
             isExistingRoom: true, // Flag to identify existing rooms
             originalData: originalData, // Keep original data for reference
             readonly: true, // Make the room type selection read-only for existing rooms
-            guests: room.guests || []
+            guests: room.guests || [],
+            nightlyPrices: nightlyRates.length > 0 ? nightlyRates : [],
+            showNightlyRates: usesNightlyRates,
+            nights: nights
         };           
                 //  return {
                 //         roomType: room.room_type || '',
@@ -234,6 +250,15 @@ const EditBooking = () => {
                 //     };
                 }).filter(room => room !== null) // Remove any invalid rooms
             });
+
+            // Set manual pricing mode for rooms that have nightly rates
+            const manualPricingModeState = {};
+            (bookingData.rooms || []).forEach((room, index) => {
+                if (room.uses_nightly_rates && room.nightly_rates && room.nightly_rates.length > 0) {
+                    manualPricingModeState[index] = true;
+                }
+            });
+            setManualPricingMode(manualPricingModeState);
 
             // Handle additional guests
             if (Array.isArray(additionalGuests) && additionalGuests.length > 0) {
@@ -255,18 +280,28 @@ const EditBooking = () => {
             }
 
             setLoading(false);
+            
+            // Store original room count, total amount and nights for comparison
+            setOriginalRoomCount(bookingData.rooms?.length || 0);
+            setOriginalBookingTotal(bookingData.total_amount || 0);
+            setOriginalNights(nights);
+            
+            // Mark initial load as complete after all data is loaded
+            // This allows useEffect to start recalculating total when user makes changes
+            setTimeout(() => setInitialLoadComplete(true), 100);
         } catch (error) {
             console.error('Error fetching booking details:', error);
             toast.error(error.response?.data?.message || error.message || 'Failed to fetch booking details');
             setError(error.response?.data?.message || error.message || 'Failed to fetch booking details');
             setLoading(false);
+            setTimeout(() => setInitialLoadComplete(true), 100);
         }
     };
 
     const searchAvailableRooms = async (roomIndex) => {
         const currentSelection = formData.roomSelections?.[roomIndex];
         if (!currentSelection) {
-            console.log('No room selection found for index:', roomIndex);
+            // console.log('No room selection found for index:', roomIndex);
             return;
         }
         if (!currentSelection.roomType) {
@@ -334,13 +369,16 @@ const EditBooking = () => {
             // For edit operations, always include the current room if it exists
             // to allow keeping the same room
             if (currentSelection.isExistingRoom && currentSelection.roomId) {
-                const currentRoomExists = formattedRooms.some(room => room.id === currentSelection.roomId);
+                const currentRoomExists = formattedRooms.some(room => room.room_id === currentSelection.roomId);
                 if (!currentRoomExists) {
                     // Always include the existing room at the start of the list for better visibility
                     formattedRooms.unshift({
-                        id: currentSelection.roomId,
-                        number: currentSelection.roomNumber,
-                        type: currentSelection.roomType,
+                        room_id: currentSelection.roomId,
+                        roomId: currentSelection.roomId,
+                        room_number: currentSelection.roomNumber,
+                        roomNumber: currentSelection.roomNumber,
+                        room_type: currentSelection.roomType,
+                        roomType: currentSelection.roomType,
                         price_per_night: parseFloat(currentSelection.price_per_night),
                         isExistingRoom: true // Mark this as the existing room for UI purposes
                     });
@@ -348,7 +386,11 @@ const EditBooking = () => {
             }
 
             // Sort rooms by room number for consistent display
-            formattedRooms.sort((a, b) => a.number.localeCompare(b.number));
+            formattedRooms.sort((a, b) => {
+                const roomA = String(a.room_number || a.roomNumber || '');
+                const roomB = String(b.room_number || b.roomNumber || '');
+                return roomA.localeCompare(roomB);
+            });
 
             setAvailableRooms(prev => ({
                 ...prev,
@@ -368,9 +410,16 @@ const EditBooking = () => {
     };
 
     useEffect(() => {
-        formData.roomSelections.forEach((_, index) => {
-            searchAvailableRooms(index);
-        });
+        // Only search if we have room selections and valid dates
+        if (formData.roomSelections && formData.roomSelections.length > 0 && 
+            formData.checkInDate && formData.checkOutDate) {
+            formData.roomSelections.forEach((room, index) => {
+                // Only search for rooms that have a room type selected
+                if (room.roomType) {
+                    searchAvailableRooms(index);
+                }
+            });
+        }
     }, [formData.checkInDate, formData.checkOutDate]);
 
     const calculateTotalAmount = () => {
@@ -382,28 +431,86 @@ const EditBooking = () => {
             (formData.checkOutDate - formData.checkInDate) / (1000 * 60 * 60 * 24)
         ));
         
-        // Start with existing booking total amount
-        let totalAmount = formData.totalAmount || 0;
+        let totalAmount;
         
-        // Only calculate for new rooms (non-existing rooms)
-        formData.roomSelections.forEach(room => {
-            if (!room.isExistingRoom && room.price_per_night) {
-                totalAmount += (parseFloat(room.price_per_night) || 0) * nights;
-            }
-        });
+        // If dates changed, recalculate entire total
+        if (datesChanged) {
+            totalAmount = 0;
+            
+            formData.roomSelections.forEach((room, index) => {
+                if (room.isExistingRoom && !room.isRestoredRoom) {
+                    // Original existing rooms: recalculate based on new nights
+                    if (room.uses_nightly_rates && room.nightlyPrices && room.nightlyPrices.length > 0) {
+                        // Sum adjusted nightly prices
+                        const nightlyTotal = room.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                        totalAmount += nightlyTotal;
+                    } else if (room.price_per_night) {
+                        // Recalculate with new nights
+                        totalAmount += (parseFloat(room.price_per_night) || 0) * nights;
+                    }
+                } else {
+                    // New rooms and restored rooms
+                    if (manualPricingMode[index] && room.nightlyPrices && room.nightlyPrices.length > 0) {
+                        const nightlyTotal = room.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                        totalAmount += nightlyTotal;
+                    } else if (room.price_per_night) {
+                        totalAmount += (parseFloat(room.price_per_night) || 0) * nights;
+                    }
+                }
+            });
+        } else {
+            // Dates not changed: use original total + new rooms only
+            totalAmount = originalBookingTotal;
+            
+            formData.roomSelections.forEach((room, index) => {
+                // Skip original existing rooms - already in originalBookingTotal
+                if (room.isExistingRoom && !room.isRestoredRoom) {
+                    return;
+                }
+                
+                // Add new rooms and restored rooms
+                if (manualPricingMode[index] && room.nightlyPrices && room.nightlyPrices.length > 0) {
+                    const nightlyTotal = room.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                    totalAmount += nightlyTotal;
+                } else if (room.price_per_night) {
+                    totalAmount += (parseFloat(room.price_per_night) || 0) * nights;
+                }
+            });
+        }
 
-        // Update form data with new total
+        // Update form data with calculated total
         setFormData(prev => ({
             ...prev,
             totalAmount: totalAmount
         }));
-        setNumberOfNights(nights);
     };
 
-    // Effect to recalculate total amount when room selections or nights change
+    // Track if initial data has loaded - don't auto-recalculate on load
+    const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+    
+    // Track original room count to detect when user adds/removes rooms
+    const [originalRoomCount, setOriginalRoomCount] = useState(0);
+    
+    // Track original booking total amount (from database)
+    const [originalBookingTotal, setOriginalBookingTotal] = useState(0);
+    
+    // Track if dates have been changed from original
+    const [datesChanged, setDatesChanged] = useState(false);
+    const [originalNights, setOriginalNights] = useState(0);
+
+    // Effect to recalculate total amount ONLY when user makes actual changes
+    // This preserves the original booking total unless user explicitly changes something
     useEffect(() => {
-        calculateTotalAmount();
-    }, [formData.roomSelections, numberOfNights]);
+        if (!initialLoadComplete) {
+            return; // Skip calculation during initial load
+        }
+        
+        // Only recalculate if room count changed (add/remove room)
+        // Manual pricing changes are handled in their own functions
+        if (formData.roomSelections.length !== originalRoomCount) {
+            calculateTotalAmount();
+        }
+    }, [formData.roomSelections.length, initialLoadComplete]);
     
 
     const handleInputChange = (e) => {
@@ -454,14 +561,12 @@ const EditBooking = () => {
         // console.log("formData after handleInputChange", formData.bookingStatus)
     };
 
-    // Calculate nights between two dates
+    // Calculate nights between two dates - Same as BookingForm
     const calculateNights = (startDate, endDate) => {
         if (!startDate || !endDate) return 0;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const diffTime = Math.abs(end - start);
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
     };
+    // console.log("numberOfNights", numberOfNights);
 
     const handleDateChange = (date, field) => {
         let newCheckIn = formData.checkInDate;
@@ -484,13 +589,89 @@ const EditBooking = () => {
         // Calculate number of nights
         const nights = calculateNights(newCheckIn, newCheckOut);
         setNumberOfNights(nights);
+        
+        // Check if nights changed from original
+        const nightsHaveChanged = nights !== originalNights;
+        if (nightsHaveChanged) {
+            setDatesChanged(true);
+        }
 
-        // Update form data with new dates
-        setFormData(prev => ({
-            ...prev,
-            checkInDate: newCheckIn,
-            checkOutDate: newCheckOut
-        }));
+        // Update form data with new dates and adjust nightly prices for all rooms
+        setFormData(prev => {
+            const updatedRoomSelections = prev.roomSelections.map((room, idx) => {
+                // Check if this room uses nightly rates (manual pricing mode OR existing room with uses_nightly_rates)
+                const usesNightlyRates = manualPricingMode[idx] || (room.isExistingRoom && room.uses_nightly_rates);
+                
+                if (usesNightlyRates && (room.showNightlyRates || room.uses_nightly_rates)) {
+                    const currentNightlyPrices = room.nightlyPrices || [];
+                    const currentNights = currentNightlyPrices.length;
+                    
+                    let newNightlyPrices = [...currentNightlyPrices];
+                    
+                    // If nights increased, add new price inputs with same value as last night
+                    if (nights > currentNights) {
+                        const lastPrice = currentNightlyPrices[currentNights - 1] || room.price_per_night || 0;
+                        for (let i = currentNights; i < nights; i++) {
+                            newNightlyPrices.push(lastPrice);
+                        }
+                    } 
+                    // If nights decreased, remove extra price inputs
+                    else if (nights < currentNights) {
+                        newNightlyPrices = newNightlyPrices.slice(0, nights);
+                    }
+                    
+                    return {
+                        ...room,
+                        nightlyPrices: newNightlyPrices,
+                        nights: nights
+                    };
+                }
+                
+                // For rooms not in manual pricing mode, just update nights
+                return {
+                    ...room,
+                    nights: nights
+                };
+            });
+            
+            // Calculate new total amount if nights changed
+            let newTotalAmount = prev.totalAmount;
+            
+            if (nightsHaveChanged) {
+                newTotalAmount = 0;
+                
+                updatedRoomSelections.forEach((room, index) => {
+                    if (room.isExistingRoom && !room.isRestoredRoom) {
+                        // Original existing rooms: recalculate based on new nights
+                        if (room.uses_nightly_rates && room.nightlyPrices && room.nightlyPrices.length > 0) {
+                            // Sum adjusted nightly prices
+                            const nightlyTotal = room.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                            newTotalAmount += nightlyTotal;
+                        } else if (room.price_per_night) {
+                            // Recalculate with new nights
+                            newTotalAmount += (parseFloat(room.price_per_night) || 0) * nights;
+                        }
+                    } else {
+                        // New rooms and restored rooms
+                        if (manualPricingMode[index] && room.nightlyPrices && room.nightlyPrices.length > 0) {
+                            const nightlyTotal = room.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                            newTotalAmount += nightlyTotal;
+                        } else if (room.price_per_night) {
+                            newTotalAmount += (parseFloat(room.price_per_night) || 0) * nights;
+                        }
+                    }
+                });
+            }
+            
+            return {
+                ...prev,
+                checkInDate: newCheckIn,
+                checkOutDate: newCheckOut,
+                numberOfNights: nights,
+                roomSelections: updatedRoomSelections,
+                totalAmount: newTotalAmount
+            };
+        });
     };
     
 
@@ -534,6 +715,9 @@ const EditBooking = () => {
                 roomSelections: updatedSelections
             }));
             
+            // Recalculate total after room type change
+            setTimeout(() => calculateTotalAmount(), 0);
+            
             // Search for available rooms with the new room type
             await searchAvailableRooms(index);
             
@@ -561,10 +745,24 @@ const EditBooking = () => {
                 }));
             
                 // Recalculate total when room is selected
-                calculateTotalAmount();
+                setTimeout(() => calculateTotalAmount(), 0);
             } else {
                 toast.error('Selected room not found in available rooms list');
             }
+        } else if (field === 'price_per_night') {
+            // When manual price is entered
+            updatedSelections[index] = {
+                ...currentSelection,
+                price_per_night: parseFloat(value) || 0
+            };
+            
+            setFormData(prev => ({
+                ...prev,
+                roomSelections: updatedSelections
+            }));
+            
+            // Recalculate total when price changes
+            setTimeout(() => calculateTotalAmount(), 0);
         }
     };
 
@@ -575,6 +773,153 @@ const EditBooking = () => {
             [field]: value
         };
         setAdditionalGuests(updatedGuests);
+    };
+
+    const toggleManualPricing = (roomIndex) => {
+        const room = formData.roomSelections[roomIndex];
+        const isManual = manualPricingMode[roomIndex];
+        
+        // Toggle the manual pricing mode first
+        const newManualMode = !isManual;
+        setManualPricingMode(prev => ({
+            ...prev,
+            [roomIndex]: newManualMode
+        }));
+        
+        if (!isManual) {
+            // Switching to manual mode - initialize nightly prices with current price_per_night
+            const nights = Math.max(1, Math.ceil(
+                (formData.checkOutDate - formData.checkInDate) / (1000 * 60 * 60 * 24)
+            ));
+            
+            const nightlyPrices = Array(nights).fill(room.price_per_night || 0);
+            
+            setFormData(prev => {
+                const updatedSelections = [...prev.roomSelections];
+                updatedSelections[roomIndex] = {
+                    ...updatedSelections[roomIndex],
+                    nightlyPrices: nightlyPrices
+                };
+                
+                // Recalculate total: Start with original booking total + only NEW rooms
+                const nights = Math.max(1, Math.ceil(
+                    (prev.checkOutDate - prev.checkInDate) / (1000 * 60 * 60 * 24)
+                ));
+                
+                let newTotalAmount = originalBookingTotal;
+                updatedSelections.forEach((r, idx) => {
+                    // Skip existing rooms
+                    if (r.isExistingRoom) {
+                        return;
+                    }
+                    
+                    if (idx === roomIndex) {
+                        // This room is now in manual mode - use nightly prices
+                        const nightlyTotal = nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                        newTotalAmount += nightlyTotal;
+                    } else if (manualPricingMode[idx] && r.nightlyPrices && r.nightlyPrices.length > 0) {
+                        // Other NEW rooms in manual mode
+                        const nightlyTotal = r.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                        newTotalAmount += nightlyTotal;
+                    } else if (r.price_per_night) {
+                        // Other NEW rooms in auto mode
+                        newTotalAmount += (parseFloat(r.price_per_night) || 0) * nights;
+                    }
+                });
+                
+                return {
+                    ...prev,
+                    roomSelections: updatedSelections,
+                    totalAmount: newTotalAmount
+                };
+            });
+        } else {
+            // Switching back to auto mode - clear nightly prices and recalculate with price_per_night
+            setFormData(prev => {
+                const updatedSelections = [...prev.roomSelections];
+                updatedSelections[roomIndex] = {
+                    ...updatedSelections[roomIndex],
+                    nightlyPrices: []
+                };
+                
+                // Recalculate total: Start with original booking total + only NEW rooms
+                const nights = Math.max(1, Math.ceil(
+                    (prev.checkOutDate - prev.checkInDate) / (1000 * 60 * 60 * 24)
+                ));
+                
+                let newTotalAmount = originalBookingTotal;
+                updatedSelections.forEach((r, idx) => {
+                    // Skip existing rooms
+                    if (r.isExistingRoom) {
+                        return;
+                    }
+                    
+                    if (idx === roomIndex) {
+                        // This room is now back to auto mode - use price_per_night
+                        if (r.price_per_night) {
+                            newTotalAmount += (parseFloat(r.price_per_night) || 0) * nights;
+                        }
+                    } else if (manualPricingMode[idx] && r.nightlyPrices && r.nightlyPrices.length > 0) {
+                        // Other NEW rooms in manual mode
+                        const nightlyTotal = r.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                        newTotalAmount += nightlyTotal;
+                    } else if (r.price_per_night) {
+                        // Other NEW rooms in auto mode
+                        newTotalAmount += (parseFloat(r.price_per_night) || 0) * nights;
+                    }
+                });
+                
+                return {
+                    ...prev,
+                    roomSelections: updatedSelections,
+                    totalAmount: newTotalAmount
+                };
+            });
+        }
+    };
+
+    const handleNightlyPriceChange = (roomIndex, nightIndex, value) => {
+        setFormData(prev => {
+            const updatedSelections = [...prev.roomSelections];
+            const nightlyPrices = [...(updatedSelections[roomIndex].nightlyPrices || [])];
+            nightlyPrices[nightIndex] = parseFloat(value) || 0;
+            
+            updatedSelections[roomIndex] = {
+                ...updatedSelections[roomIndex],
+                nightlyPrices: nightlyPrices
+            };
+            
+            // Recalculate total: Start with original booking total + only NEW rooms
+            const nights = Math.max(1, Math.ceil(
+                (prev.checkOutDate - prev.checkInDate) / (1000 * 60 * 60 * 24)
+            ));
+            
+            let newTotalAmount = originalBookingTotal;
+            updatedSelections.forEach((r, idx) => {
+                // Skip original existing rooms (not restored ones)
+                if (r.isExistingRoom && !r.isRestoredRoom) {
+                    return;
+                }
+                
+                // Process new rooms and restored rooms
+                // Check if this room is in manual pricing mode
+                if (manualPricingMode[idx] && r.nightlyPrices && r.nightlyPrices.length > 0) {
+                    // Sum all nightly prices for manual mode
+                    const roomTotal = r.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                    newTotalAmount += roomTotal;
+                } else {
+                    // Use price_per_night * nights for auto mode
+                    const pricePerNight = parseFloat(r.price_per_night) || 0;
+                    newTotalAmount += pricePerNight * nights;
+                }
+            });
+            
+            return {
+                ...prev,
+                roomSelections: updatedSelections,
+                totalAmount: newTotalAmount
+            };
+        });
     };
 
     const addRoom = async () => {
@@ -605,9 +950,12 @@ const EditBooking = () => {
         const restoredRoom = {
             ...roomData,
             isExistingRoom: true,
+            isRestoredRoom: true, // Flag to identify this is a restored room - price changes should be tracked
             originalData: roomData,
             roomType: roomData.roomType,
-            roomNumber: roomData.roomNumber
+            roomNumber: roomData.roomNumber,
+            showNightlyRates: roomData.uses_nightly_rates || false, // Show nightly rates if room uses them
+            nightlyPrices: roomData.nightlyPrices || [] // Restore nightly prices
         };
         
         // Add the room back to selections at its previous position or at the end
@@ -615,14 +963,31 @@ const EditBooking = () => {
             Math.min(roomData.previousIndex, formData.roomSelections.length) : 
             formData.roomSelections.length;
 
-        setFormData(prev => ({
-            ...prev,
-            roomSelections: [
+        setFormData(prev => {
+            const updatedSelections = [
                 ...prev.roomSelections.slice(0, insertIndex),
                 restoredRoom,
                 ...prev.roomSelections.slice(insertIndex)
-            ]
-        }));
+            ];
+            
+            // Add back the price of restored existing room
+            const priceToAdd = roomData.priceToRestore || 0;
+            const newTotalAmount = prev.totalAmount + priceToAdd;
+            
+            return {
+                ...prev,
+                roomSelections: updatedSelections,
+                totalAmount: newTotalAmount
+            };
+        });
+        
+        // Set manual pricing mode for this room if it uses nightly rates
+        if (roomData.uses_nightly_rates) {
+            setManualPricingMode(prev => ({
+                ...prev,
+                [insertIndex]: true
+            }));
+        }
 
         // Remove from removedRooms using _id or room number as identifier
         setRemovedRooms(prev => prev.filter(room => 
@@ -633,26 +998,91 @@ const EditBooking = () => {
     const removeRoom = (index) => {
         const roomToRemove = formData.roomSelections[index];
         
-        // If it's an existing room, store it in removedRooms for reference
-        if (roomToRemove.isExistingRoom) {
-            setRemovedRooms(prev => [...prev, {
-                ...roomToRemove.originalData,
-                roomNumber: roomToRemove.roomNumber,
-                roomType: roomToRemove.roomType,
-                previousIndex: index
-            }]);
-        }
-
         if (formData.roomSelections.length <= 1) {
             toast.error('Cannot remove the last room');
             return;
         }
+        
+        // Calculate the price to be removed for the removed room
+        const nights = Math.max(1, Math.ceil(
+            (formData.checkOutDate - formData.checkInDate) / (1000 * 60 * 60 * 24)
+        ));
+        
+        let priceToRemove = 0;
+        if (roomToRemove.isExistingRoom) {
+            // Debug log
+            // console.log('🔍 Removing existing room:', {
+            //     roomNumber: roomToRemove.roomNumber,
+            //     uses_nightly_rates: roomToRemove.uses_nightly_rates,
+            //     nightlyPrices: roomToRemove.nightlyPrices,
+            //     price_per_night: roomToRemove.price_per_night,
+            //     nights: nights
+            // });
+            
+            // For existing room: calculate based on nightly rates or price_per_night
+            if (roomToRemove.uses_nightly_rates && roomToRemove.nightlyPrices && roomToRemove.nightlyPrices.length > 0) {
+                // Sum of nightly rates
+                priceToRemove = roomToRemove.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                // console.log('💰 Using nightly rates. Total price to remove:', priceToRemove);
+            } else {
+                // price_per_night * nights
+                priceToRemove = (parseFloat(roomToRemove.price_per_night) || 0) * nights;
+                // console.log('💰 Using price_per_night. Price to remove:', priceToRemove);
+            }
+            
+            // Store removed existing room for restore functionality with all data
+            setRemovedRooms(prev => [...prev, {
+                ...roomToRemove, // Store complete room data including nightlyPrices
+                originalData: roomToRemove.originalData,
+                roomNumber: roomToRemove.roomNumber,
+                roomType: roomToRemove.roomType,
+                previousIndex: index,
+                priceToRestore: priceToRemove, // Store price for restore
+                uses_nightly_rates: roomToRemove.uses_nightly_rates,
+                nightlyPrices: roomToRemove.nightlyPrices || []
+            }]);
+        }
 
-        setFormData(prev => ({
-            ...prev,
-            roomSelections: prev.roomSelections.filter((_, i) => i !== index),
-            numberOfRooms: prev.roomSelections.length - 1
-        }));
+        setFormData(prev => {
+            const updatedRoomSelections = prev.roomSelections.filter((_, i) => i !== index);
+            
+            let newTotalAmount;
+            
+            if (roomToRemove.isExistingRoom) {
+                // For existing room: Subtract from current total
+                newTotalAmount = prev.totalAmount - priceToRemove;
+                // console.log('📊 Existing room removed. Previous total:', prev.totalAmount, '→ New total:', newTotalAmount);
+            } else {
+                // For new room: Recalculate from original booking total + remaining new rooms
+                newTotalAmount = originalBookingTotal;
+                
+                updatedRoomSelections.forEach((room, idx) => {
+                    // Skip existing rooms - already included in originalBookingTotal
+                    if (room.isExistingRoom) {
+                        return;
+                    }
+                    
+                    // Adjust index for manualPricingMode since we removed a room
+                    const adjustedIdx = idx < index ? idx : idx + 1;
+                    
+                    if (manualPricingMode[adjustedIdx] && room.nightlyPrices && room.nightlyPrices.length > 0) {
+                        // Manual pricing mode - sum nightly prices
+                        const roomTotal = room.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0);
+                        newTotalAmount += roomTotal;
+                    } else if (room.price_per_night) {
+                        // Auto pricing mode - price_per_night * nights
+                        newTotalAmount += (parseFloat(room.price_per_night) || 0) * nights;
+                    }
+                });
+            }
+            
+            return {
+                ...prev,
+                roomSelections: updatedRoomSelections,
+                numberOfRooms: updatedRoomSelections.length,
+                totalAmount: newTotalAmount
+            };
+        });
         
         setAvailableRooms(prev => {
             const newAvailableRooms = {};
@@ -665,6 +1095,20 @@ const EditBooking = () => {
                 }
             });
             return newAvailableRooms;
+        });
+        
+        // Also update manual pricing mode indices
+        setManualPricingMode(prev => {
+            const newManualPricing = {};
+            Object.keys(prev).forEach(key => {
+                const numKey = parseInt(key);
+                if (numKey < index) {
+                    newManualPricing[numKey] = prev[key];
+                } else if (numKey > index) {
+                    newManualPricing[numKey - 1] = prev[key];
+                }
+            });
+            return newManualPricing;
         });
     };
     
@@ -761,17 +1205,26 @@ const EditBooking = () => {
                 // Keep room if it's an existing room or if it has all required fields
                 return room.isExistingRoom || (room.roomType && room.roomId && room.price_per_night);
             })
-            .map(room => {
+            .map((room, index) => {
                 // For existing rooms - preserve all data and update status
                 if (room.isExistingRoom) {
                     const newStatus = formData.bookingStatus=== 'Checked-in' ? 'Occupied' :
                                      formData.bookingStatus === 'Checked-out' ? 'Available' : 'Booked';
                     
+                    // Check if this existing room is using manual nightly pricing
+                    const usesNightlyRates = manualPricingMode[index] && room.nightlyPrices && room.nightlyPrices.length > 0;
+                    const nightlyRates = usesNightlyRates ? room.nightlyPrices.map((rate, nightIndex) => ({
+                        night: nightIndex + 1,
+                        rate: parseFloat(rate) || 0
+                    })) : null;
+                    
                     // Ensure room_id is properly formatted
                     return {
                         ...room.originalData,
                         room_id: parseInt(room.originalData.room_id || room.roomId, 10),
-                        status: newStatus
+                        status: newStatus,
+                        uses_nightly_rates: usesNightlyRates,
+                        nightly_rates: nightlyRates
                     };
                 }
 
@@ -783,15 +1236,24 @@ const EditBooking = () => {
                     return null;
                 }
 
-            return {
-                room_id: roomId,
-                room_type: room.roomType || room.room_type,
-                room_number: room.roomNumber || room.room_number,
-                price_per_night: pricePerNight,
-                status: formData.bookingStatus === 'Checked-in' ? 'Occupied' :
-                        formData.bookingStatus === 'Checked-out' ? 'Available' : 'Booked'
-            };
-        });
+                // Check if this room uses manual nightly pricing
+                const usesNightlyRates = manualPricingMode[index] && room.nightlyPrices && room.nightlyPrices.length > 0;
+                const nightlyRates = usesNightlyRates ? room.nightlyPrices.map((rate, nightIndex) => ({
+                    night: nightIndex + 1,
+                    rate: parseFloat(rate) || 0
+                })) : null;
+
+                return {
+                    room_id: roomId,
+                    room_type: room.roomType || room.room_type,
+                    room_number: room.roomNumber || room.room_number,
+                    price_per_night: pricePerNight,
+                    status: formData.bookingStatus === 'Checked-in' ? 'Occupied' :
+                            formData.bookingStatus === 'Checked-out' ? 'Available' : 'Booked',
+                    uses_nightly_rates: usesNightlyRates,
+                    nightly_rates: nightlyRates
+                };
+            });
 
         // Filter out any null rooms (incomplete new room selections)
         const validRooms = selected_rooms.filter(room => room !== null);
@@ -807,6 +1269,20 @@ const EditBooking = () => {
         // Calculate number of nights
         const numberOfNights = calculateNights(formData.checkInDate, formData.checkOutDate);
 
+        // Prepare combined nightly rates for booking table (ONLY rooms with manual pricing)
+        const hasNightlyRates = validRooms.some(room => room.uses_nightly_rates);
+        const combinedNightlyRates = hasNightlyRates ? validRooms.flatMap(room => {
+            // Only include rooms that are using manual nightly pricing
+            if (room.uses_nightly_rates && room.nightly_rates && room.nightly_rates.length > 0) {
+                return room.nightly_rates.map(nr => ({
+                    night: nr.night,
+                    rate: nr.rate,
+                    room_id: room.room_id.toString() // Add room_id to track which rate belongs to which room
+                }));
+            }
+            return []; // Skip rooms without manual pricing
+        }) : null;
+
         // Prepare booking data
         const bookingData = {
             number_of_nights: numberOfNights, // Add number of nights to booking data
@@ -819,7 +1295,8 @@ const EditBooking = () => {
             total_amount: parseFloat(formData.totalAmount),
             payment_status: formData.paymentStatus.toUpperCase(),
             booking_status: formData.bookingStatus,
-            selected_rooms: validRooms // Only include valid rooms
+            selected_rooms: validRooms, // Only include valid rooms
+            nightly_rates: combinedNightlyRates // Combined nightly rates for booking table
         };
 
         // Prepare customer data
@@ -911,7 +1388,7 @@ const EditBooking = () => {
 
     return (
         <div className="edit-booking-container">
-            <h2 className="edit-booking-title">Edit Booking Details</h2>
+            {/* <h2 className="edit-booking-title">Edit Booking Details</h2> */}
             <form onSubmit={handleSubmit} className="edit-booking-form">
                 {/* Booking Status Section */}
                 <div className="form-section">
@@ -1107,6 +1584,7 @@ const EditBooking = () => {
                                                                 roomSelections: updatedSelections
                                                             };
                                                         });
+                                                        setTimeout(() => calculateTotalAmount(), 0);
                                                     }
                                                 }}
                                                 className="form-control"
@@ -1136,6 +1614,46 @@ const EditBooking = () => {
                                     )}
                                 </div>
                             </div>
+                            
+                            {/* Manual Pricing Section - For both existing and new rooms */}
+                            {room.roomId && numberOfNights > 0 && (
+                                <div className="manual-pricing-section">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleManualPricing(index)}
+                                        className="toggle-manual-pricing-btn"
+                                    >
+                                        {manualPricingMode[index] ? 'Use Previous Price' : 'Add Price Manually'}
+                                    </button>
+                                    
+                                    {manualPricingMode[index] && room.nightlyPrices && (
+                                        <div className="room-nightly-prices">
+                                            <h5>Nightly Prices {room.isExistingRoom && <span className="existing-room-label">(Existing Room)</span>}</h5>
+                                            {room.nightlyPrices.map((price, nightIndex) => (
+                                                <div key={nightIndex} className="night-price-row">
+                                                    <label>Night {nightIndex + 1}:</label>
+                                                    <input
+                                                        type="number"
+                                                        value={price || ''}
+                                                        onChange={(e) => handleNightlyPriceChange(index, nightIndex, e.target.value)}
+                                                        className="price-input"
+                                                        placeholder="Enter price"
+                                                        min="0"
+                                                        step="0.01"
+                                                        disabled={room.isExistingRoom && !room.isRestoredRoom}
+                                                        title={room.isExistingRoom && !room.isRestoredRoom ? "Cannot edit existing room prices" : ""}
+                                                    />
+                                                </div>
+                                            ))}
+                                            {room.nightlyPrices.length > 0 && (
+                                                <div className="room-total">
+                                                    <strong>Room Total:</strong> ₹{room.nightlyPrices.reduce((sum, price) => sum + (parseFloat(price) || 0), 0).toFixed(2)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
