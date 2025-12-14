@@ -586,23 +586,21 @@ const BookingManagement = () => {
     
       </div>
 
-      {/* Actions Section */}
+      {/* Actions Section - Single Row */}
       <div className="actions-section">
-        <div className="left-actions">
-          <button 
-            className="add-booking-btn"
-            onClick={() => navigate('/bookings/new')}
-          >
-            <RiAddLine /> Add Booking
-          </button>
-          <button 
-            className="view-history-btn"
-            onClick={() => setFilter('checked-out')}
-          >
-            <RiHistoryLine /> View History
-          </button>
-        </div>
-
+        <button 
+          className="add-booking-btn"
+          onClick={() => navigate('/bookings/new')}
+        >
+          <RiAddLine /> Add Booking
+        </button>
+        <button 
+          className="view-history-btn"
+          onClick={() => setFilter('checked-out')}
+        >
+          <RiHistoryLine /> View History
+        </button>
+        
         <div className="search-section">
           <div className="search-bar">
             <RiSearchLine />

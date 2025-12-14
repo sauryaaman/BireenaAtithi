@@ -70,6 +70,7 @@ main {
 
 /* Mobile styles */
 @media (max-width: 768px) {
+  /* Hide sidebar completely on mobile - use Navbar instead */
   .sidebar {
     display: none;
   }
@@ -77,6 +78,7 @@ main {
   main {
     margin-left: 0;
     padding-top: var(--navbar-height);
+    width: 100%;
   }
 
   /* Show navbar only on mobile */
@@ -230,4 +232,23 @@ main {
 
 .page-container.sidebar-collapsed {
   margin-left: 80px;
+}
+
+/* Page container responsive adjustments */
+@media (max-width: 768px) {
+  .page-container {
+    margin-left: 0;
+    padding: 1rem;
+    padding-top: calc(var(--navbar-height) + 1rem);
+  }
+
+  .page-container.sidebar-collapsed {
+    margin-left: 0;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .page-container {
+    padding: 1.5rem;
+  }
 }

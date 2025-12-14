@@ -58,17 +58,13 @@
   margin: 0;
 }
 
-/* Actions Section */
+/* Actions Section - Single Row Layout */
 .actions-section {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 20px;
-}
-
-.left-actions {
-  display: flex;
-  gap: 10px;
+  flex-wrap: nowrap;
 }
 
 .add-booking-btn,
@@ -82,6 +78,8 @@
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .add-booking-btn {
@@ -105,8 +103,9 @@
 /* Search Section */
 .search-section {
   flex: 1;
-  max-width: 400px;
-  margin: 0 20px;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 }
 
 .search-bar {
@@ -115,11 +114,14 @@
   background-color: #f5f5f5;
   border-radius: 5px;
   padding: 8px 15px;
+  width: 100%;
+  height: 40px;
 }
 
 .search-bar svg {
   color: #666;
   margin-right: 10px;
+  flex-shrink: 0;
 }
 
 .search-bar input {
@@ -128,6 +130,7 @@
   flex: 1;
   outline: none;
   font-size: 14px;
+  height: 100%;
 }
 
 /* Filters Section */
@@ -805,5 +808,392 @@
   to { 
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - MOBILE & TABLET
+   ============================================ */
+
+/* Mobile First - Base styles (< 640px) */
+@media (max-width: 639px) {
+  .booking-management {
+    padding: 10px;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Actions Section - Wrap on mobile */
+  .actions-section {
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 12px;
+  }
+
+  .add-booking-btn,
+  .view-history-btn {
+    flex: 0 0 calc(50% - 4px);
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  /* Search Section - Full width on mobile */
+  .search-section {
+    flex: 1 1 100%;
+    margin: 0;
+    order: 3;
+  }
+
+  .search-bar {
+    width: 100%;
+    padding: 8px 10px;
+    min-height: auto;
+  }
+
+  .search-bar input {
+    font-size: 14px;
+    padding: 2px 0;
+  }
+
+  .search-bar svg {
+    margin-right: 8px;
+    font-size: 16px;
+  }
+
+  /* Filters Section */
+  .filters-section {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .status-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+  }
+
+  .status-tabs button {
+    padding: 10px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .sort-options {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sort-options select {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .sort-options button {
+    padding: 10px 14px;
+  }
+
+  /* Table - Horizontal scroll on mobile */
+  .bookings-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .bookings-table {
+    min-width: 1400px; /* Force horizontal scroll */
+    font-size: 13px;
+  }
+
+  .bookings-table th,
+  .bookings-table td {
+    padding: 10px 8px;
+    white-space: nowrap;
+  }
+
+  .bookings-table th {
+    font-size: 12px;
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 10;
+  }
+
+  /* Compact buttons for mobile */
+  .add-payment-btn,
+  .order-food-btn,
+  .edit-food-btn,
+  .pay-food-btn,
+  .view-invoice-btn,
+  .checkin-btn,
+  .checkout-btn,
+  .cancel-btn,
+  .view-btn,
+  .edit-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* Hide icon text on very small screens */
+  .icon-text {
+    display: none;
+  }
+
+  /* Customer and Room info compact */
+  .customer-info,
+  .room-info {
+    font-size: 12px;
+  }
+
+  .customer-info small,
+  .room-info small {
+    font-size: 11px;
+  }
+
+  /* Status badges smaller */
+  .status-badge,
+  .payment-status {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  /* Modal adjustments */
+  .booking-detail-modal,
+  .payment-modal {
+    width: 95%;
+    max-width: 95vw;
+    margin: 10px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 12px;
+  }
+
+  .modal-header h2,
+  .modal-header h3 {
+    font-size: 16px;
+  }
+
+  .modal-content {
+    padding: 12px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .modal-footer button {
+    width: 100%;
+  }
+
+  /* Payment modal adjustments */
+  .payment-details {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .form-group input,
+  .form-group select {
+    font-size: 14px;
+    padding: 10px;
+  }
+}
+
+/* Tablet - Medium screens (640px to 1023px) */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .booking-management {
+    padding: 15px;
+  }
+
+  /* Actions Section */
+  .actions-section {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .left-actions {
+    flex: 1;
+    min-width: 250px;
+  }
+
+  .search-section {
+    flex: 1;
+    min-width: 250px;
+  }
+
+  /* Filters */
+  .status-tabs {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .status-tabs button {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* Table */
+  .bookings-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bookings-table {
+    font-size: 13px;
+    min-width: 1200px;
+  }
+
+  .bookings-table th,
+  .bookings-table td {
+    padding: 10px;
+  }
+
+  /* Show some icon text on tablet */
+  .icon-text {
+    display: inline;
+  }
+
+  /* Buttons */
+  .add-payment-btn,
+  .order-food-btn,
+  .edit-food-btn,
+  .pay-food-btn,
+  .view-invoice-btn,
+  .view-btn,
+  .edit-btn,
+  .cancel-btn {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  /* Modal adjustments */
+  .booking-detail-modal {
+    width: 90%;
+    max-width: 700px;
+  }
+
+  .detail-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop - Large screens (1024px+) */
+@media (min-width: 1024px) {
+  .booking-management {
+    padding: 20px;
+    max-width: 100%;
+  }
+
+  /* Full icon text on desktop */
+  .icon-text {
+    display: inline;
+  }
+
+  /* Table normal size */
+  .bookings-table {
+    font-size: 14px;
+  }
+
+  .bookings-table th,
+  .bookings-table td {
+    padding: 12px 15px;
+  }
+
+  /* Detail grid 3 columns */
+  .detail-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Extra wide screens (1440px+) */
+@media (min-width: 1440px) {
+  .booking-management {
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 25px 40px;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .booking-management {
+    padding: 8px;
+  }
+
+  .status-tabs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .status-tabs button {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .bookings-table {
+    font-size: 12px;
+  }
+
+  .modal-content {
+    max-height: 65vh;
+    overflow-y: auto;
+  }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+  .add-booking-btn,
+  .view-history-btn,
+  .status-tabs button,
+  .add-payment-btn,
+  .order-food-btn,
+  .edit-food-btn,
+  .pay-food-btn,
+  .view-invoice-btn,
+  .checkin-btn,
+  .checkout-btn,
+  .cancel-btn,
+  .view-btn,
+  .edit-btn {
+    min-height: 44px; /* Touch target size */
+  }
+}
+
+/* Print styles */
+@media print {
+  .actions-section,
+  .filters-section,
+  .add-payment-btn,
+  .order-food-btn,
+  .edit-food-btn,
+  .pay-food-btn,
+  .view-invoice-btn,
+  .actions-cell,
+  .view-cell,
+  .edit-cell {
+    display: none;
+  }
+
+  .bookings-table {
+    font-size: 10px;
+  }
+
+  .booking-management {
+    padding: 0;
   }
 }

@@ -20,7 +20,7 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 
 const Sidebar = ({ onCollapse }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hotelName, setHotelName] = useState('');
   const location = useLocation();
 
@@ -88,8 +88,8 @@ const Sidebar = ({ onCollapse }) => {
     <>
       <Navbar 
         hotelName={hotelName} 
-        onMenuClick={() => setIsMenuOpen(!isMenuOpen)}
-        isMenuOpen={isMenuOpen}
+        onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        isMenuOpen={isMobileMenuOpen}
       />
       
       <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>

@@ -322,3 +322,318 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(102, 126, 234, 0.3);
 }
+
+/* ============================================
+   RESPONSIVE DESIGN - MOBILE & TABLET
+   ============================================ */
+
+/* Mobile First - Base styles (< 640px) */
+@media (max-width: 639px) {
+    .profile-view {
+        padding: 10px;
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    .profile-container {
+        gap: 1.5rem;
+        padding: 0;
+        width: 100%;
+    }
+
+    /* Logo Section */
+    .logo-section {
+        padding: 1.5rem 1rem;
+        gap: 1rem;
+    }
+
+    .hotel-logo-container {
+        width: 150px !important;
+        height: 150px !important;
+        border-width: 3px;
+    }
+
+    .default-logo {
+        font-size: 2.5rem;
+    }
+
+    .logo-section h1 {
+        font-size: 1.5rem;
+    }
+
+    /* Profile Card */
+    .profile-card {
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+
+    .card-header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .card-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .edit-button {
+        width: 100%;
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    /* Profile Section */
+    .profile-section {
+        padding: 1rem;
+    }
+
+    .section-title h3 {
+        font-size: 1.1rem;
+    }
+
+    /* Form Styles */
+    .form-style-info {
+        gap: 0.75rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+    }
+
+    .form-group {
+        width: 100%;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+    }
+
+    .form-value {
+        font-size: 0.95rem;
+        padding: 0.75rem;
+    }
+
+    /* Info Grid */
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .info-item {
+        padding: 0.75rem;
+    }
+
+    .info-item label {
+        font-size: 0.85rem;
+    }
+
+    .info-item span {
+        font-size: 0.95rem;
+    }
+
+    /* Permissions Grid */
+    .permissions-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .permission-badge {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    /* Staff Badge */
+    .staff-badge {
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    /* Status Badge */
+    .status-badge {
+        padding: 0.35rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    /* View Only Badge */
+    .view-only-badge {
+        padding: 0.35rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    /* Loading */
+    .loading {
+        min-height: 150px;
+        font-size: 1rem;
+    }
+}
+
+/* Tablet - Medium screens (640px to 1023px) */
+@media (min-width: 640px) and (max-width: 1023px) {
+    .profile-view {
+        padding: 1.5rem;
+    }
+
+    .profile-container {
+        gap: 2rem;
+        padding: 0.5rem;
+    }
+
+    /* Logo Section */
+    .logo-section {
+        padding: 2rem 1.5rem;
+    }
+
+    .hotel-logo-container {
+        width: 200px !important;
+        height: 200px !important;
+    }
+
+    .default-logo {
+        font-size: 3.5rem;
+    }
+
+    .logo-section h1 {
+        font-size: 1.75rem;
+    }
+
+    /* Profile Card */
+    .card-header {
+        padding: 1.5rem;
+    }
+
+    .card-header h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Form Styles */
+    .form-row {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .form-group {
+        flex: 1;
+        min-width: 250px;
+    }
+
+    /* Info Grid */
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Permissions Grid */
+    .permissions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Desktop - Large screens (1024px+) */
+@media (min-width: 1024px) {
+    .profile-view {
+        padding: 2rem;
+    }
+
+    .profile-container {
+        max-width: 1000px;
+    }
+
+    /* Info Grid */
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Permissions Grid */
+    .permissions-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+/* Extra wide screens (1440px+) */
+@media (min-width: 1440px) {
+    .profile-container {
+        max-width: 1200px;
+    }
+
+    .hotel-logo-container {
+        width: 280px !important;
+        height: 280px !important;
+    }
+
+    .default-logo {
+        font-size: 4.5rem;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .profile-view {
+        padding: 10px;
+    }
+
+    .logo-section {
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        padding: 1rem;
+    }
+
+    .hotel-logo-container {
+        width: 120px !important;
+        height: 120px !important;
+    }
+
+    .logo-section h1 {
+        font-size: 1.25rem;
+        text-align: left;
+        margin-left: 1rem;
+    }
+
+    .permissions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+    .edit-button {
+        min-height: 44px;
+        padding: 12px 20px;
+    }
+
+    .permission-badge {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* Print styles */
+@media print {
+    .profile-view {
+        padding: 0;
+        background: white;
+    }
+
+    .edit-button {
+        display: none;
+    }
+
+    .profile-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    .card-header {
+        background: white !important;
+        color: #000 !important;
+        border-bottom: 2px solid #000;
+    }
+
+    .logo-section {
+        page-break-after: avoid;
+    }
+}
