@@ -345,11 +345,11 @@ export default function StaffManagement() {
                 const activeKeys = Object.keys(perms).filter(k => !!perms[k]);
                 return (
                 <tr key={item.id} className={!item.is_active ? 'inactive' : ''}>
-                  <td>{item.full_name}</td>
-                  <td>{item.phone}</td>
-                  <td>{item.is_active ? 'Yes' : 'No'}</td>
-                  <td>{activeKeys.length ? activeKeys.join(', ') : '-'} </td>
-                  <td className="actions">
+                  <td data-label="Full Name">{item.full_name}</td>
+                  <td data-label="Phone">{item.phone}</td>
+                  <td data-label="Active">{item.is_active ? 'Yes' : 'No'}</td>
+                  <td data-label="Permissions">{activeKeys.length ? activeKeys.join(', ') : '-'} </td>
+                  <td className="actions" data-label="Actions">
                     <button onClick={() => startEdit(item)} className="btn small">Edit</button>
                     <button onClick={() => deleteStaff(item.id)} className="btn small danger">Delete</button>
                     <button onClick={() => toggleActive(item)} className="btn small muted">{item.is_active ? 'Deactivate' : 'Activate'}</button>
@@ -390,14 +390,14 @@ export default function StaffManagement() {
                         const activeKeys = Object.keys(perms).filter(k => !!perms[k]);
                         return (
                           <tr key={item.id}>
-                            <td className="staff-name">{item.full_name}</td>
-                            <td>{item.phone}</td>
-                            <td>
+                            <td className="staff-name" data-label="Full Name">{item.full_name}</td>
+                            <td data-label="Phone">{item.phone}</td>
+                            <td data-label="Status">
                               <span className={`status-badge ${item.is_active ? 'status-active' : 'status-inactive'}`}>
                                 {item.is_active ? 'Active' : 'Inactive'}
                               </span>
                             </td>
-                            <td>
+                            <td data-label="Current Permissions">
                               {activeKeys.length ? (
                                 <div className="permission-badges">
                                   {activeKeys.map(key => (
@@ -408,7 +408,7 @@ export default function StaffManagement() {
                                 <span className="no-permissions">No permissions</span>
                               )}
                             </td>
-                            <td className="actions">
+                            <td className="actions" data-label="Actions">
                               <button className="btn btn-primary small" onClick={() => openPermissions(item)}>
                                 Edit Permissions
                               </button>
