@@ -66,7 +66,7 @@ const BookingManagement = () => {
       if (Array.isArray(data)) {
         setBookings(data);
         
-        // Check food orders for all bookings
+        // Check food orders for all bookings and store amount_due
         const foodOrdersMap = {};
         await Promise.all(data.map(async (booking) => {
           try {
@@ -75,11 +75,17 @@ const BookingManagement = () => {
               { headers: { Authorization: `Bearer ${token}` } }
             );
             if (orderRes.data?.order) {
-              foodOrdersMap[booking.booking_id] = true;
+              foodOrdersMap[booking.booking_id] = {
+                exists: true,
+                amount_due: orderRes.data.order.amount_due || 0,
+                has_pending_payment: (orderRes.data.order.amount_due || 0) > 0
+              };
+            } else {
+              foodOrdersMap[booking.booking_id] = { exists: false, amount_due: 0, has_pending_payment: false };
             }
           } catch (err) {
             // No order exists
-            foodOrdersMap[booking.booking_id] = false;
+            foodOrdersMap[booking.booking_id] = { exists: false, amount_due: 0, has_pending_payment: false };
           }
         }));
         setBookingFoodOrders(foodOrdersMap);
@@ -305,7 +311,7 @@ const BookingManagement = () => {
       await fetchBookings();
       alert('Checkout successful!');
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to checkout booking';
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to checkout booking';
       setError(errorMsg);
       alert(errorMsg);
     }
@@ -761,26 +767,26 @@ const BookingManagement = () => {
                   <td data-test="order-food-column">
                     <button
                       onClick={() => handleOpenFoodModal(booking)}
-                      className={bookingFoodOrders[booking.booking_id] ? "edit-food-btn" : "order-food-btn"}
+                      className={bookingFoodOrders[booking.booking_id]?.exists ? "edit-food-btn" : "order-food-btn"}
                       disabled={!['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase())}
                       title={
                         !['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase())
                           ? `Food order only available for checked-in bookings (Current status: ${booking.status})`
-                          : bookingFoodOrders[booking.booking_id] ? 'Edit Food Order' : 'Order Food'
+                          : bookingFoodOrders[booking.booking_id]?.exists ? 'Edit Food Order' : 'Order Food'
                       }
                     >
-                      <span>{bookingFoodOrders[booking.booking_id] ? '📝 Edit Food' : '🍽️ Order Food'}</span>
+                      <span>{bookingFoodOrders[booking.booking_id]?.exists ? '📝 Edit Food' : '🍽️ Order Food'}</span>
                     </button>
                   </td>
                   <td data-test="pay-food-column">
                     <button
                       onClick={() => handleOpenFoodPaymentModal(booking)}
                       className="pay-food-btn"
-                      disabled={!['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase()) || !bookingFoodOrders[booking.booking_id]}
+                      disabled={!['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase()) || !bookingFoodOrders[booking.booking_id]?.exists}
                       title={
                         !['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase())
                           ? `Food payment only available for checked-in bookings (Current status: ${booking.status})`
-                          : !bookingFoodOrders[booking.booking_id]
+                          : !bookingFoodOrders[booking.booking_id]?.exists
                           ? 'No food order exists for this booking'
                           : 'Add payment for food order'
                       }
@@ -811,7 +817,9 @@ const BookingManagement = () => {
                         Check In
                       </button>
                     )}
-                    {booking.status?.toLowerCase() === 'checked-in' && booking.payment_status?.toUpperCase() === 'PAID' && (
+                    {booking.status?.toLowerCase() === 'checked-in' && 
+                     booking.payment_status?.toUpperCase() === 'PAID' && 
+                     !bookingFoodOrders[booking.booking_id]?.has_pending_payment && (
                       <button 
                         onClick={() => handleCheckout(booking.booking_id)}
                         className="checkout-btn"
@@ -819,6 +827,26 @@ const BookingManagement = () => {
                       >
                         Checkout
                       </button>
+                    )}
+                    {booking.status?.toLowerCase() === 'checked-in' && 
+                     booking.payment_status?.toUpperCase() === 'PAID' && 
+                     bookingFoodOrders[booking.booking_id]?.has_pending_payment && (
+                      <span 
+                        className="pending-payment-badge" 
+                        title={`Clear food payment of ₹${bookingFoodOrders[booking.booking_id]?.amount_due?.toFixed(2) || 0} first`}
+                        style={{
+                          backgroundColor: '#FFF3CD',
+                          color: '#856404',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          display: 'inline-block',
+                          border: '1px solid #FFEAA7'
+                        }}
+                      >
+                        Food Payment Due
+                      </span>
                     )}
                     {booking.status?.toLowerCase() === 'checked-out' && (
                       <span className="checkout-complete">Completed</span>

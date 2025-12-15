@@ -3,12 +3,12 @@ const supabase = require('../config/db');
 // CREATE - New order with items
 const createOrder = async (req, res) => {
   try {
-    const { booking_id, items, amount_paid, amount_due } = req.body; // items = [{menu_item_id, quantity}, ...]
+    const { booking_id, items } = req.body; // items = [{menu_item_id, quantity}, ...]
+    // Payment recording is handled separately via payment transaction API
     let userId = req.user.user_id || req.user.id;
     
     // console.log('=== createOrder called ===');
     // console.log('booking_id:', booking_id, 'items:', items);
-    // console.log('amount_paid:', amount_paid, 'amount_due:', amount_due);
     // console.log('userId:', userId);
 
     if (!booking_id || !items || items.length === 0) {
@@ -48,7 +48,8 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Create order
+    // Create order - Set amount_paid to 0 initially
+    // Payment will be recorded separately via payment transaction API
     // console.log('Creating new order for booking:', bookingId);
     const { data: newOrder, error: createError } = await supabase
       .from('food_orders')
@@ -58,8 +59,8 @@ const createOrder = async (req, res) => {
           user_id: userIdInt,
           status: 'pending',
           total_amount: 0,
-          amount_paid: amount_paid || 0,
-          amount_due: amount_due || 0
+          amount_paid: 0,
+          amount_due: 0
         }
       ])
       .select();
@@ -124,18 +125,17 @@ const createOrder = async (req, res) => {
       return res.status(500).json({ error: 'Failed to add items', details: insertError.message });
     }
 
-    // Update order total and payment amounts
-    const finalAmountDue = Math.max(0, totalAmount - (amount_paid || 0));
+    // Update order total - amount_due equals total initially
+    // Payment will be recorded separately via payment transaction API which will update amount_paid
     await supabase
       .from('food_orders')
       .update({ 
         total_amount: totalAmount,
-        amount_paid: amount_paid || 0,
-        amount_due: finalAmountDue
+        amount_due: totalAmount
       })
       .eq('id', orderId);
 
-    // console.log('💰 Order total set:', { orderId, total_amount: totalAmount, amount_paid: amount_paid || 0, amount_due: finalAmountDue });
+    // console.log('💰 Order total set:', { orderId, total_amount: totalAmount, amount_paid: 0, amount_due: totalAmount });
     
     // console.log('\n' + '='.repeat(70));
     // console.log('✅ NEW ORDER CREATED SUCCESSFULLY');
@@ -154,11 +154,11 @@ const createOrder = async (req, res) => {
     // console.log('='.repeat(70) + '\n');
 
     res.json({ 
-      order: { ...newOrder[0], total_amount: totalAmount, amount_paid: amount_paid || 0, amount_due: finalAmountDue }, 
+      order: { ...newOrder[0], total_amount: totalAmount, amount_paid: 0, amount_due: totalAmount }, 
       items: orderItems, 
       total_amount: totalAmount,
-      amount_paid: amount_paid || 0,
-      amount_due: finalAmountDue
+      amount_paid: 0,
+      amount_due: totalAmount
     });
   } catch (err) {
     console.error('❌ Error in createOrder:', err);
@@ -170,12 +170,12 @@ const createOrder = async (req, res) => {
 const updateOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { items, amount_paid, amount_due } = req.body; // items = [{menu_item_id, quantity, itemId?}, ...] 
+    const { items } = req.body; // items = [{menu_item_id, quantity, itemId?}, ...] 
     // itemId exists for existing items, null for new items, quantity 0 = delete
+    // Payment updates should be done separately via payment API
 
     // console.log('=== updateOrder called ===');
     // console.log('orderId:', orderId, 'items to update:', items);
-    // console.log('amount_paid:', amount_paid, 'amount_due:', amount_due);
 
     if (!orderId || !items || items.length === 0) {
       return res.status(400).json({ error: 'Order ID and items are required' });
@@ -343,18 +343,19 @@ const updateOrder = async (req, res) => {
       }
     }
 
-    // Update order total and payment amounts
-    const finalAmountDue = Math.max(0, totalAmount - (amount_paid || 0));
+    // Update order total and recalculate amount_due based on existing payments
+    // Preserve the existing amount_paid as payments are tracked separately
+    const currentAmountPaid = order.amount_paid || 0;
+    const finalAmountDue = Math.max(0, totalAmount - currentAmountPaid);
     await supabase
       .from('food_orders')
       .update({ 
         total_amount: totalAmount,
-        amount_paid: amount_paid || 0,
         amount_due: finalAmountDue
       })
       .eq('id', orderId);
 
-    // console.log('💰 Order total updated:', { orderId, total_amount: totalAmount, amount_paid: amount_paid || 0, amount_due: finalAmountDue });
+    // console.log('💰 Order total updated:', { orderId, total_amount: totalAmount, amount_paid: currentAmountPaid, amount_due: finalAmountDue });
 
     // Get updated order with items
     const { data: updatedItems } = await supabase
@@ -379,7 +380,7 @@ const updateOrder = async (req, res) => {
 
     res.json({ 
       message: 'Order updated', 
-      order: { ...order, total_amount: totalAmount, amount_paid: amount_paid || 0, amount_due: finalAmountDue }, 
+      order: { ...order, total_amount: totalAmount, amount_paid: currentAmountPaid, amount_due: finalAmountDue }, 
       items: updatedItems 
     });
   } catch (err) {

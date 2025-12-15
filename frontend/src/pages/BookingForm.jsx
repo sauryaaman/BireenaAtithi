@@ -18,7 +18,7 @@ const BookingForm = () => {
   const [searchingRooms, setSearchingRooms] = useState(false);
   const [showGuestForms, setShowGuestForms] = useState(false);
   const [availableRooms, setAvailableRooms] = useState({});
- 
+  const [validationErrors, setValidationErrors] = useState({});
 
   const [bookingType, setBookingType] = useState('book');
   
@@ -32,6 +32,35 @@ const BookingForm = () => {
     { value: 'VOTER_ID', label: 'Voter ID' },
     { value: 'PAN_CARD', label: 'PAN Card' }
   ];
+
+  // Validation patterns
+  const validationPatterns = {
+    AADHAR: { regex: /^[0-9]{12}$/, message: 'Aadhar must be exactly 12 digits' },
+    PASSPORT: { regex: /^[A-Z][0-9]{7}$/, message: 'Passport must be 1 uppercase letter followed by 7 digits (e.g., A1234567)' },
+    DRIVING_LICENSE: { regex: /^[A-Z]{2}[0-9]{13}$/, message: 'Driving License must be 2 uppercase letters followed by 13 digits' },
+    VOTER_ID: { regex: /^[A-Z]{3}[0-9]{7}$/, message: 'Voter ID must be 3 uppercase letters followed by 7 digits' },
+    PAN_CARD: { regex: /^[A-Z]{5}[0-9]{4}[A-Z]$/, message: 'PAN must be 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F)' },
+    phone: { regex: /^[0-9]{10}$/, message: 'Phone number must be exactly 10 digits' },
+    pin: { regex: /^[0-9]{6}$/, message: 'PIN code must be exactly 6 digits' },
+    email: { regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email format' }
+  };
+
+  // Validation functions
+  const validateField = (fieldType, value, idProofType = null) => {
+    if (!value) return '';
+    
+    let pattern;
+    if (fieldType === 'idProof' && idProofType) {
+      pattern = validationPatterns[idProofType];
+    } else {
+      pattern = validationPatterns[fieldType];
+    }
+    
+    if (pattern && !pattern.regex.test(value)) {
+      return pattern.message;
+    }
+    return '';
+  };
 
   const [formData, setFormData] = useState({
     // Booking Details
@@ -249,36 +278,35 @@ const BookingForm = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // Update form data
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
 
-    // Reset room selection when room type changes
-    if (name === 'roomType') {
-      setFormData(prev => ({
-        ...prev,
-        roomId: ''
-      }));
-      setAvailableRooms([]);
-      setRoomsSearched(false);
+    // Real-time validation
+    let error = '';
+    if (name === 'idProof') {
+      error = validateField('idProof', value, formData.idProofType);
+    } else if (name === 'phoneNumber') {
+      error = validateField('phone', value);
+    } else if (name === 'pin') {
+      error = validateField('pin', value);
+    } else if (name === 'email' && value) {
+      error = validateField('email', value);
     }
 
-    // Add room to selected rooms when a room is selected
-    if (name === 'roomId' && value) {
-      const selectedRoom = availableRooms.find(room => room._id === value);
-      if (selectedRoom) {
-        setSelectedRooms(prev => [...prev, selectedRoom]);
-        // Reset room selection for next room
-        setFormData(prev => ({
-          ...prev,
-          roomId: '',
-          roomType: ''
-        }));
-        // Filter out selected room from available rooms
-        setAvailableRooms(prev => prev.filter(room => room._id !== value));
+    // Update validation errors
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      if (error) {
+        newErrors[name] = error;
+      } else {
+        delete newErrors[name];
       }
-    }
+      return newErrors;
+    });
   };
 
   const handleDateChange = (date, field) => {
@@ -289,6 +317,34 @@ const BookingForm = () => {
       roomSelections: Array(prev.numberOfRooms).fill().map(() => ({ roomType: '', roomId: '' })),
       totalAmount: 0
     }));
+    
+    // Validate dates
+    const checkIn = field === 'checkInDate' ? date : formData.checkInDate;
+    const checkOut = field === 'checkOutDate' ? date : formData.checkOutDate;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.checkInDate;
+      delete newErrors.checkOutDate;
+      
+      if (checkIn < today) {
+        newErrors.checkInDate = 'Check-in date cannot be in the past';
+      }
+      
+      if (checkOut <= checkIn) {
+        newErrors.checkOutDate = 'Check-out must be after check-in';
+      }
+      
+      const daysDiff = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+      if (daysDiff < 1) {
+        newErrors.checkOutDate = 'Minimum 1 night stay required';
+      }
+      
+      return newErrors;
+    });
     
     // Reset available rooms
     setAvailableRooms({});
@@ -314,6 +370,29 @@ const BookingForm = () => {
         };
         return newGuests;
       });
+
+      // Validate additional guest fields
+      const errorKey = `guest_${index}_${field}`;
+      let error = '';
+      
+      if (field === 'id_proof') {
+        const idType = additionalGuests[index]?.id_proof_type || 'AADHAR';
+        error = validateField('idProof', value, idType);
+      } else if (field === 'phone' && value) {
+        error = validateField('phone', value);
+      } else if (field === 'email' && value) {
+        error = validateField('email', value);
+      }
+
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        if (error) {
+          newErrors[errorKey] = error;
+        } else {
+          delete newErrors[errorKey];
+        }
+        return newErrors;
+      });
     }
   };
 
@@ -321,19 +400,134 @@ const BookingForm = () => {
       e.preventDefault();
       setLoading(type);
       setError('');
+      setValidationErrors({});
 
       try {
+        const errors = {};
+
+        // Validate dates
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (formData.checkInDate < today) {
+          errors.checkInDate = 'Check-in date cannot be in the past';
+        }
+        
+        if (formData.checkOutDate <= formData.checkInDate) {
+          errors.checkOutDate = 'Check-out must be after check-in';
+        }
+        
+        const daysDiff = Math.ceil((formData.checkOutDate - formData.checkInDate) / (1000 * 60 * 60 * 24));
+        if (daysDiff < 1) {
+          errors.checkOutDate = 'Minimum 1 night stay required';
+        }
+
+        // Validate primary guest
+        if (!formData.customerName?.trim()) {
+          errors.customerName = 'Name is required';
+        }
+
+        const phoneError = validateField('phone', formData.phoneNumber);
+        if (!formData.phoneNumber) {
+          errors.phoneNumber = 'Phone number is required';
+        } else if (phoneError) {
+          errors.phoneNumber = phoneError;
+        }
+
+        if (formData.email) {
+          const emailError = validateField('email', formData.email);
+          if (emailError) errors.email = emailError;
+        }
+
+        const idProofError = validateField('idProof', formData.idProof, formData.idProofType);
+        if (!formData.idProof) {
+          errors.idProof = 'ID proof number is required';
+        } else if (idProofError) {
+          errors.idProof = idProofError;
+        }
+
+        const pinError = validateField('pin', formData.pin);
+        if (!formData.pin) {
+          errors.pin = 'PIN code is required';
+        } else if (pinError) {
+          errors.pin = pinError;
+        }
+
+        if (!formData.addressLine1?.trim()) {
+          errors.addressLine1 = 'Address is required';
+        }
+
+        if (!formData.city?.trim()) {
+          errors.city = 'City is required';
+        }
+
+        if (!formData.state?.trim()) {
+          errors.state = 'State is required';
+        }
+
+        if (!formData.country?.trim()) {
+          errors.country = 'Country is required';
+        }
+
+        if (!formData.mealPlan?.trim()) {
+          errors.mealPlan = 'Meal plan is required';
+        }
+
+        // Validate additional guests
+        additionalGuests.forEach((guest, index) => {
+          if (!guest.name?.trim()) {
+            errors[`guest_${index}_name`] = 'Guest name is required';
+          }
+          
+          const guestIdProofError = validateField('idProof', guest.id_proof, guest.id_proof_type || 'AADHAR');
+          if (!guest.id_proof) {
+            errors[`guest_${index}_id_proof`] = 'ID proof is required';
+          } else if (guestIdProofError) {
+            errors[`guest_${index}_id_proof`] = guestIdProofError;
+          }
+
+          if (guest.phone) {
+            const guestPhoneError = validateField('phone', guest.phone);
+            if (guestPhoneError) {
+              errors[`guest_${index}_phone`] = guestPhoneError;
+            }
+          }
+
+          if (guest.email) {
+            const guestEmailError = validateField('email', guest.email);
+            if (guestEmailError) {
+              errors[`guest_${index}_email`] = guestEmailError;
+            }
+          }
+        });
+
         // Validate room selections and payment status
         const hasIncompleteRooms = formData.roomSelections.some(
           selection => !selection.roomType || !selection.roomId
         );
 
         if (hasIncompleteRooms) {
-          throw new Error('Please complete room selection for all rooms');
+          errors.roomSelection = 'Please complete room selection for all rooms';
         }
 
         if (!formData.paymentStatus) {
-          throw new Error('Please select a payment status');
+          errors.paymentStatus = 'Please select a payment status';
+        }
+
+        // If validation errors exist, show them and stop
+        if (Object.keys(errors).length > 0) {
+          setValidationErrors(errors);
+          setError('Please fix all validation errors before submitting');
+          setLoading('');
+          
+          // Scroll to first error
+          setTimeout(() => {
+            const firstError = document.querySelector('.form-group.error, .error-message');
+            if (firstError) {
+              firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+          return;
         }
 
         const token = localStorage.getItem('token');
@@ -571,7 +765,7 @@ const BookingForm = () => {
         <div className="form-section">
           <h3><RiHotelBedLine /> Room Selection</h3>
           <div className="form-grid">
-            <div className="form-group">
+            <div className={`form-group ${validationErrors.checkInDate ? 'error' : ''}`}>
               <label>Check-in Date *</label>
               <DatePicker
                 selected={formData.checkInDate}
@@ -581,9 +775,14 @@ const BookingForm = () => {
                 className="date-picker"
                 required
               />
+              {validationErrors.checkInDate && (
+                <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.checkInDate}
+                </span>
+              )}
             </div>
 
-            <div className="form-group">
+            <div className={`form-group ${validationErrors.checkOutDate ? 'error' : ''}`}>
               <label>Check-out Date *</label>
               <DatePicker
                 selected={formData.checkOutDate}
@@ -593,6 +792,11 @@ const BookingForm = () => {
                 className="date-picker"
                 required
               />
+              {validationErrors.checkOutDate && (
+                <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.checkOutDate}
+                </span>
+              )}
             </div>
 
             <div className="form-group">
@@ -880,7 +1084,7 @@ const BookingForm = () => {
               />
             </div>
 
-            <div className="form-group">
+            <div className={`form-group ${validationErrors.phoneNumber ? 'error' : ''}`}>
               <label htmlFor="phoneNumber">Phone Number *</label>
               <input
                 type="tel"
@@ -888,11 +1092,17 @@ const BookingForm = () => {
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
+                maxLength="10"
                 required
               />
+              {validationErrors.phoneNumber && (
+                <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.phoneNumber}
+                </span>
+              )}
             </div>
 
-            <div className="form-group">
+            <div className={`form-group ${validationErrors.email ? 'error' : ''}`}>
               <label htmlFor="email">Email</label>
               <input
                 type="email"
@@ -901,6 +1111,11 @@ const BookingForm = () => {
                 value={formData.email}
                 onChange={handleInputChange}
               />
+              {validationErrors.email && (
+                <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.email}
+                </span>
+              )}
             </div>
 
             <div className="form-group">
@@ -920,7 +1135,7 @@ const BookingForm = () => {
               </select>
             </div>
 
-            <div className="form-group">
+            <div className={`form-group ${validationErrors.idProof ? 'error' : ''}`}>
               <label htmlFor="idProof">ID Proof Number *</label>
               <input
                 type="text"
@@ -929,8 +1144,14 @@ const BookingForm = () => {
                 value={formData.idProof}
                 onChange={handleInputChange}
                 placeholder={`Enter ${idProofTypes.find(t => t.value === formData.idProofType)?.label} Number`}
+                style={{ textTransform: 'uppercase' }}
                 required
               />
+              {validationErrors.idProof && (
+                <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.idProof}
+                </span>
+              )}
             </div>
 
             <div className="form-group">
@@ -1023,7 +1244,7 @@ const BookingForm = () => {
               />
             </div>
 
-            <div className="form-group">
+            <div className={`form-group ${validationErrors.pin ? 'error' : ''}`}>
               <label htmlFor="pin">PIN Code *</label>
               <input
                 type="text"
@@ -1031,8 +1252,14 @@ const BookingForm = () => {
                 name="pin"
                 value={formData.pin}
                 onChange={handleInputChange}
+                maxLength="6"
                 required
               />
+              {validationErrors.pin && (
+                <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                  {validationErrors.pin}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1045,7 +1272,7 @@ const BookingForm = () => {
               <div key={index} className="additional-guest">
                 <h4>Guest {index + 2}</h4>
                 <div className="form-grid">
-                  <div className="form-group">
+                  <div className={`form-group ${validationErrors[`guest_${index}_name`] ? 'error' : ''}`}>
                     <label>Name *</label>
                     <input
                       type="text"
@@ -1053,6 +1280,11 @@ const BookingForm = () => {
                       onChange={(e) => handleGuestChange(index, 'name', e.target.value)}
                       required
                     />
+                    {validationErrors[`guest_${index}_name`] && (
+                      <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {validationErrors[`guest_${index}_name`]}
+                      </span>
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -1070,15 +1302,21 @@ const BookingForm = () => {
                     </select>
                   </div>
 
-                  <div className="form-group">
+                  <div className={`form-group ${validationErrors[`guest_${index}_id_proof`] ? 'error' : ''}`}>
                     <label>ID Proof Number *</label>
                     <input
                       type="text"
                       value={guest.id_proof || ''}
-                      onChange={(e) => handleGuestChange(index, 'id_proof', e.target.value)}
+                      onChange={(e) => handleGuestChange(index, 'id_proof', e.target.value.toUpperCase())}
                       placeholder={`Enter ${idProofTypes.find(t => t.value === (guest.id_proof_type || 'AADHAR'))?.label} Number`}
+                      style={{ textTransform: 'uppercase' }}
                       required
                     />
+                    {validationErrors[`guest_${index}_id_proof`] && (
+                      <span className="error-message" style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {validationErrors[`guest_${index}_id_proof`]}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

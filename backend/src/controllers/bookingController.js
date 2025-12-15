@@ -71,6 +71,58 @@ async function validateRoomAvailability(roomIds, checkin_date, checkout_date) {
     return rooms;
 }
 
+// Validation helper functions
+function validateIdProof(idType, idNumber) {
+    if (!idNumber) return 'ID proof number is required';
+    
+    const patterns = {
+        AADHAR: /^[0-9]{12}$/,
+        PASSPORT: /^[A-Z][0-9]{7}$/,
+        DRIVING_LICENSE: /^[A-Z]{2}[0-9]{13}$/,
+        VOTER_ID: /^[A-Z]{3}[0-9]{7}$/,
+        PAN_CARD: /^[A-Z]{5}[0-9]{4}[A-Z]$/
+    };
+    
+    const pattern = patterns[idType];
+    if (!pattern) return 'Invalid ID proof type';
+    
+    if (!pattern.test(idNumber)) {
+        const messages = {
+            AADHAR: 'Aadhar must be exactly 12 digits',
+            PASSPORT: 'Passport must be 1 uppercase letter followed by 7 digits',
+            DRIVING_LICENSE: 'Driving License must be 2 uppercase letters followed by 13 digits',
+            VOTER_ID: 'Voter ID must be 3 uppercase letters followed by 7 digits',
+            PAN_CARD: 'PAN must be 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F)'
+        };
+        return messages[idType] || 'Invalid ID proof format';
+    }
+    
+    return null;
+}
+
+function validatePhoneNumber(phone) {
+    if (!phone) return 'Phone number is required';
+    if (!/^[0-9]{10}$/.test(phone)) {
+        return 'Phone number must be exactly 10 digits';
+    }
+    return null;
+}
+
+function validatePinCode(pin) {
+    if (!pin) return 'PIN code is required';
+    if (!/^[0-9]{6}$/.test(pin)) {
+        return 'PIN code must be exactly 6 digits';
+    }
+    return null;
+}
+
+function validateEmail(email) {
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return 'Invalid email format';
+    }
+    return null;
+}
+
 // Create a new booking
 async function createBooking(req, res) {
     try {
@@ -89,17 +141,106 @@ async function createBooking(req, res) {
             is_immediate_checkin = false
         } = req.body;
 
+        // Comprehensive validation
+        const validationErrors = [];
+
+        // Validate primary guest
+        if (!primary_guest) {
+            return res.status(400).json({ message: 'Primary guest information is required' });
+        }
+
+        if (!primary_guest.name?.trim()) {
+            validationErrors.push('Primary guest name is required');
+        }
+
+        const phoneError = validatePhoneNumber(primary_guest.phone);
+        if (phoneError) validationErrors.push(`Primary guest: ${phoneError}`);
+
+        const emailError = validateEmail(primary_guest.email);
+        if (emailError) validationErrors.push(`Primary guest: ${emailError}`);
+
+        const idProofError = validateIdProof(primary_guest.id_proof_type, primary_guest.id_proof);
+        if (idProofError) validationErrors.push(`Primary guest: ${idProofError}`);
+
+        const pinError = validatePinCode(primary_guest.pin);
+        if (pinError) validationErrors.push(`Primary guest: ${pinError}`);
+
+        if (!primary_guest.address_line1?.trim()) {
+            validationErrors.push('Primary guest address is required');
+        }
+
+        if (!primary_guest.city?.trim()) {
+            validationErrors.push('Primary guest city is required');
+        }
+
+        if (!primary_guest.state?.trim()) {
+            validationErrors.push('Primary guest state is required');
+        }
+
+        if (!primary_guest.country?.trim()) {
+            validationErrors.push('Primary guest country is required');
+        }
+
+        // Validate additional guests
+        additional_guests.forEach((guest, index) => {
+            if (!guest.name?.trim()) {
+                validationErrors.push(`Guest ${index + 2}: Name is required`);
+            }
+
+            const guestIdError = validateIdProof(guest.id_proof_type || 'AADHAR', guest.id_proof);
+            if (guestIdError) {
+                validationErrors.push(`Guest ${index + 2}: ${guestIdError}`);
+            }
+
+            if (guest.phone) {
+                const guestPhoneError = validatePhoneNumber(guest.phone);
+                if (guestPhoneError) {
+                    validationErrors.push(`Guest ${index + 2}: ${guestPhoneError}`);
+                }
+            }
+
+            if (guest.email) {
+                const guestEmailError = validateEmail(guest.email);
+                if (guestEmailError) {
+                    validationErrors.push(`Guest ${index + 2}: ${guestEmailError}`);
+                }
+            }
+        });
+
         if (!selected_rooms || !selected_rooms.length) {
-            return res.status(400).json({ message: 'No rooms selected' });
+            validationErrors.push('No rooms selected');
+        }
+
+        // Validate dates
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        const checkinDateOnly = new Date(checkin_date);
+        checkinDateOnly.setHours(0, 0, 0, 0);
+        const checkoutDateOnly = new Date(checkout_date);
+        checkoutDateOnly.setHours(0, 0, 0, 0);
+
+        if (checkinDateOnly < currentDate) {
+            validationErrors.push('Check-in date cannot be in the past');
+        }
+
+        if (checkoutDateOnly <= checkinDateOnly) {
+            validationErrors.push('Check-out date must be after check-in date');
+        }
+
+        const daysDiff = Math.ceil((checkoutDateOnly - checkinDateOnly) / (1000 * 60 * 60 * 24));
+        if (daysDiff < 1) {
+            validationErrors.push('Minimum 1 night stay required');
+        }
+
+        // If there are validation errors, return them
+        if (validationErrors.length > 0) {
+            return res.status(400).json({ 
+                message: 'Validation failed', 
+                errors: validationErrors 
+            });
         }
 
         const roomIds = selected_rooms.map(room => room.room_id);
-
-            // Validate dates
-            const currentDate = new Date();
-            currentDate.setHours(0, 0, 0, 0);
-            const checkinDateOnly = new Date(checkin_date);
-            checkinDateOnly.setHours(0, 0, 0, 0);
 
             // Determine if it's an immediate check-in day
             const isCheckInDay = checkinDateOnly.getTime() === currentDate.getTime();
@@ -502,6 +643,25 @@ async function checkoutBooking(req, res) {
                 error: 'Only checked-in bookings can be checked out',
                 current_status: booking.status
             });
+        }
+
+        // Check if there are any pending food order payments
+        const { data: foodOrders, error: foodOrderError } = await supabase
+            .from('food_orders')
+            .select('id, total_amount, amount_paid, amount_due')
+            .eq('booking_id', booking_id);
+
+        if (!foodOrderError && foodOrders && foodOrders.length > 0) {
+            // Check if any food order has pending payment (amount_due > 0)
+            const pendingFoodPayment = foodOrders.some(order => (order.amount_due || 0) > 0);
+            if (pendingFoodPayment) {
+                const totalFoodDue = foodOrders.reduce((sum, order) => sum + (order.amount_due || 0), 0);
+                return res.status(400).json({ 
+                    error: 'Cannot checkout: Pending food order payment',
+                    message: `Please clear food order payment of ₹${totalFoodDue.toFixed(2)} before checkout`,
+                    food_amount_due: totalFoodDue
+                });
+            }
         }
 
         // Update booking to checked-out

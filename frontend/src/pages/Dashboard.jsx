@@ -35,6 +35,7 @@ const Dashboard = () => {
       });
       setStats(response.data);
       setError('');
+      // console.log('Dashboard Stats:', response.data);
     } catch (err) {
       setError('Failed to fetch dashboard statistics');
       console.error('Dashboard Error:', err);

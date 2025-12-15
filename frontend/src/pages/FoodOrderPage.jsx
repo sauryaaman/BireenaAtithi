@@ -379,11 +379,11 @@ const FoodOrderPage = () => {
           </div>
           <div class="info-row">
             <span class="info-label">Time:</span>
-            <span>${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Date:</span>
-            <span>${new Date().toLocaleDateString('en-IN')}</span>
+            <span>${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
           </div>
         </div>
 
@@ -424,7 +424,7 @@ const FoodOrderPage = () => {
           <p>=============================</p>
           <p>Status: ${orderStatus?.toUpperCase()}</p>
           <p>--- END OF KOT ---</p>
-          <p>${new Date().toLocaleString('en-IN')}</p>
+          <p>${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
         </div>
 
         <div style="text-align: center; margin-top: 15px; padding: 10px; border-top: 2px dashed #000;">
@@ -524,28 +524,14 @@ const FoodOrderPage = () => {
         await axios.put(
           `${BASE_URL}/api/food-orders/${existingOrder.id}`,
           { 
-            items: itemsToUpdate,
-            amount_paid: amountPaid,
-            amount_due: Math.max(0, total - amountPaid)
+            items: itemsToUpdate
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Record only the ADDITIONAL payment if new amount > initial amount
-        const additionalPayment = amountPaid - initialAmountPaid;
-        if (additionalPayment > 0) {
-          await axios.post(
-            `${BASE_URL}/api/food-payments/record`,
-            {
-              food_order_id: existingOrder.id,
-              amount: additionalPayment,
-              payment_mode: paymentMode,
-              notes: `Additional payment for Food Order - Booking #${bookingId}`
-            },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-        }
-
+        // NO payment recording on update - payment should only be recorded separately
+        // The amount_paid in food_orders table is already updated via updateOrder API
+        
         toast.success('Order updated successfully!');
         
         // Ask if user wants to print updated KOT
@@ -564,9 +550,7 @@ const FoodOrderPage = () => {
           `${BASE_URL}/api/food-orders/create`,
           { 
             booking_id: bookingId,
-            items: itemsToCreate,
-            amount_paid: amountPaid,
-            amount_due: Math.max(0, total - amountPaid)
+            items: itemsToCreate
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -794,11 +778,11 @@ const FoodOrderPage = () => {
                   <h3>Payment Details</h3>
                   
                   <div className="payment-field">
-                    <label>Amount Paid (₹)</label>
+                    <label>Amount Paid (₹) {existingOrder && <small style={{color: '#666', fontWeight: 'normal'}}>(Use Food Payment Report to add more payments)</small>}</label>
                     {existingOrder ? (
                       <div className="amount-paid-display">
                         <span className="locked-amount">₹{initialAmountPaid.toFixed(2)}</span>
-                        <span className="lock-icon" title="Locked - Cannot modify previous payment">🔒</span>
+                        <span className="lock-icon" title="Previous payments are locked - Add new payments via Food Payment Report">🔒</span>
                       </div>
                     ) : (
                       <input
