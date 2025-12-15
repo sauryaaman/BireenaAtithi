@@ -224,7 +224,14 @@ export const PricingPage = () => {
                   plan.mostPopular
                     ? 'border-cyan-500/50 bg-slate-900/80 shadow-xl shadow-cyan-500/20'
                     : 'border-cyan-500/20 bg-slate-900/50'
-                } p-8 backdrop-blur-sm transform transition-all duration-300 hover:scale-105`}
+                } p-8 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 cursor-pointer`}
+                onClick={() => {
+                  if (plan.id === 'restaurant') {
+                    window.open('https://kot.bireenaatithi.in', '_blank');
+                  } else {
+                    window.location.href = '/login';
+                  }
+                }}
               >
                 {/* Card gradient */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${plan.gradient} opacity-10`} />
@@ -277,19 +284,35 @@ export const PricingPage = () => {
                     )}
                   </div>
 
-                  <Button
-                    asChild
-                    className={`relative mt-6 w-full overflow-hidden ${
-                      plan.mostPopular
-                        ? `bg-gradient-to-r ${plan.gradient} text-white hover:opacity-90 shadow-lg`
-                        : 'border border-cyan-500/50 bg-slate-800/50 text-cyan-400 hover:bg-cyan-500/10'
-                    }`}
-                  >
-                    <Link to="/contact">
-                      <span className="relative z-10">Get Started</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
-                    </Link>
-                  </Button>
+                  {plan.id === 'restaurant' ? (
+                    <Button
+                      asChild
+                      className={`relative mt-6 w-full overflow-hidden ${
+                        plan.mostPopular
+                          ? `bg-gradient-to-r ${plan.gradient} text-white hover:opacity-90 shadow-lg`
+                          : 'border border-cyan-500/50 bg-slate-800/50 text-cyan-400 hover:bg-cyan-500/10'
+                      }`}
+                    >
+                      <a href="https://kot.bireenaatithi.in" target="_blank" rel="noopener noreferrer">
+                        <span className="relative z-10">Get Started</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button
+                      asChild
+                      className={`relative mt-6 w-full overflow-hidden ${
+                        plan.mostPopular
+                          ? `bg-gradient-to-r ${plan.gradient} text-white hover:opacity-90 shadow-lg`
+                          : 'border border-cyan-500/50 bg-slate-800/50 text-cyan-400 hover:bg-cyan-500/10'
+                      }`}
+                    >
+                      <Link to="/login">
+                        <span className="relative z-10">Get Started</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
+                      </Link>
+                    </Button>
+                  )}
 
                   <ul className="mt-8 space-y-3 text-sm leading-6 text-gray-300">
                     {plan.features.map((feature) => (
