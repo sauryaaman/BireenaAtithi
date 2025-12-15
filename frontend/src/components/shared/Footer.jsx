@@ -154,12 +154,14 @@ import {
   Mail,
   Phone,
   MapPin,
+  Youtube,
 } from 'lucide-react';
 import logo from '../../../public/logo.png';
 
 const socialLinks = [
   { name: 'Facebook', icon: Facebook, href: 'https://www.facebook.com/share/1AA1UTr5Tc' },
   { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/bireenainfo' },
+  { name: 'Youtube', icon: Youtube, href: 'http://www.youtube.com/@Bireenainfotech' },
   // { name: 'Twitter', icon: Twitter, href: '#' },
 ];
 

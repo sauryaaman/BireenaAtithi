@@ -281,7 +281,7 @@ const CustomerManagement = () => {
         </div>
 
         <div className="search-section">
-          <div className="search-bar">
+          <form className="search-bar" onSubmit={(e) => e.preventDefault()}>
             <RiSearchLine />
             <input
               type="text"
@@ -289,7 +289,7 @@ const CustomerManagement = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </div>
+          </form>
         </div>
       </div>
 
