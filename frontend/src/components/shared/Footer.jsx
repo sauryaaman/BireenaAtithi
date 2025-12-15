@@ -309,17 +309,17 @@ export const Footer = () => {
               </span>
               . All rights reserved.{' '}
               Designed & Developed by{' '}
-              <a
-                href="https://github.com/Mrsaxena01/"
+              {/* <a
+                // href="https://github.com/Mrsaxena01/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="relative inline-block group"
-              >
+              > */}
                 <span className="relative bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent font-bold group-hover:from-cyan-300 group-hover:to-blue-300 transition-all duration-300">
                   Bireena Infotech
                 </span>
                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-cyan-400 to-blue-400 transform scale-x-0 transition-transform duration-300 group-hover:scale-x-100" />
-              </a>
+              {/* </a> */}
             </p>
           </div>
         </div>

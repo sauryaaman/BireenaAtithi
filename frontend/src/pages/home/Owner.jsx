@@ -212,7 +212,7 @@ export const Owner = () => {
                 </Button>
                 <Button asChild variant="outline">
                   <a
-                    href="www.youtube.com/@Bireenainfotech"
+                    href="http://www.youtube.com/@Bireenainfotech"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2"
