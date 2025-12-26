@@ -146,17 +146,13 @@ const BookingManagement = () => {
       );
     })
     .sort((a, b) => {
-      // Apply sorting
-      if (sortBy === 'date') {
-        return sortOrder === 'desc'
-          ? new Date(b.checkin_date) - new Date(a.checkin_date)
-          : new Date(a.checkin_date) - new Date(b.checkin_date);
-      } else if (sortBy === 'room') {
-        return sortOrder === 'desc'
-          ? b.room.room_number - a.room.room_number
-          : a.room.room_number - b.room.room_number;
-      }
-      return 0;
+      // Apply sorting by date
+      const dateA = new Date(a.checkin_date);
+      const dateB = new Date(b.checkin_date);
+      
+      return sortOrder === 'desc'
+        ? dateB - dateA
+        : dateA - dateB;
     });
 
   // Calculate nights between dates
@@ -175,7 +171,7 @@ const BookingManagement = () => {
     }
   };
 
-  // Handle booking operations
+  //Handle booking operations
   const handleViewDetails = (booking) => {
     setSelectedBooking(booking);
     setShowDetailModal(true);
@@ -656,15 +652,9 @@ const BookingManagement = () => {
         </div>
 
         <div className="sort-options">
-          <select 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-          >
-            <option value="date">Sort by Date</option>
-            <option value="room">Sort by Room</option>
-          </select>
-          <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}>
-            {sortOrder === 'asc' ? '↑' : '↓'}
+          <span className="sort-label">Sort by Check-In Date:</span>
+          <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="sort-btn">
+            {sortOrder === 'desc' ? '↓ Newest First' : '↑ Oldest First'}
           </button>
         </div>
       </div>
@@ -717,7 +707,7 @@ const BookingManagement = () => {
                   <td>
                     <div className="room-info">
                       {booking?.rooms?.map((room, index) => (
-                        <div key={room.room_id} className={index > 0 ? 'mt-2' : ''}>
+                        <div key={`${booking.booking_id}-${room.room_id}-${index}`} className={index > 0 ? 'mt-2' : ''}>
                           <div>Room {room.room_number}</div>
                           <small>{room.room_type} (₹{room.price_per_night}/night)</small>
                         </div>
@@ -782,12 +772,14 @@ const BookingManagement = () => {
                     <button
                       onClick={() => handleOpenFoodPaymentModal(booking)}
                       className="pay-food-btn"
-                      disabled={!['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase()) || !bookingFoodOrders[booking.booking_id]?.exists}
+                      disabled={!['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase()) || !bookingFoodOrders[booking.booking_id]?.exists || (bookingFoodOrders[booking.booking_id]?.amount_due || 0) === 0}
                       title={
                         !['checkin', 'checked-in', 'checked in'].includes(booking.status?.toLowerCase())
                           ? `Food payment only available for checked-in bookings (Current status: ${booking.status})`
                           : !bookingFoodOrders[booking.booking_id]?.exists
                           ? 'No food order exists for this booking'
+                          : (bookingFoodOrders[booking.booking_id]?.amount_due || 0) === 0
+                          ? 'No pending food payment dues'
                           : 'Add payment for food order'
                       }
                     >

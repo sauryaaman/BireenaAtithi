@@ -993,12 +993,30 @@ async function downloadInvoice(req, res) {
                     .eq('food_order_id', foodOrderData.id)
                     .order('created_at', { ascending: false });
 
-                // Format food items
-                const foodItems = foodOrderData.food_order_items.map(item => ({
-                    name: item.menu_items?.name || 'Unknown Item',
-                    price: item.price,
-                    quantity: item.quantity
-                }));
+                // Format food items and group duplicates
+                const foodItemsMap = {};
+                foodOrderData.food_order_items.forEach(item => {
+                    const itemName = item.menu_items?.name || 'Unknown Item';
+                    const itemPrice = item.price;
+                    
+                    // Create a unique key for grouping (name + price)
+                    const key = `${itemName}_${itemPrice}`;
+                    
+                    if (foodItemsMap[key]) {
+                        // Item already exists, add to quantity
+                        foodItemsMap[key].quantity += item.quantity;
+                    } else {
+                        // New item
+                        foodItemsMap[key] = {
+                            name: itemName,
+                            price: itemPrice,
+                            quantity: item.quantity
+                        };
+                    }
+                });
+                
+                // Convert map to array
+                const foodItems = Object.values(foodItemsMap);
 
                 // Get room numbers from invoice response
                 const roomNumbers = invoiceDetailsResponse.booking?.rooms

@@ -130,18 +130,20 @@ const CustomerManagement = () => {
   const filteredCustomers = customers
     .filter(customer => {
       // Apply search filter
-      if (searchQuery) {
+      if (searchQuery && searchQuery.trim()) {
         const searchLower = searchQuery.toLowerCase();
+        
+        // Check additional guests
         const searchInAdditionalGuests = customer.bookings?.some(booking =>
           booking.additional_guests?.some(guest =>
-            guest.guest_name.toLowerCase().includes(searchLower) ||
-            guest.phone.includes(searchQuery)
+            (guest?.guest_name || '').toLowerCase().includes(searchLower) ||
+            (guest?.phone || '').toString().includes(searchQuery)
           )
-        );
+        ) || false;
         
         return (
           (customer?.name || '').toLowerCase().includes(searchLower) ||
-          (customer?.phone || '').includes(searchQuery) ||
+          (customer?.phone || '').toString().includes(searchQuery) ||
           (customer?.email || '').toLowerCase().includes(searchLower) ||
           searchInAdditionalGuests
         );
@@ -150,11 +152,20 @@ const CustomerManagement = () => {
     })
     .filter(customer => {
       // Apply date filter
-      if (dateFilter.startDate && dateFilter.endDate) {
-        return customer.bookings?.some(booking =>
-          new Date(booking.checkin_date) >= new Date(dateFilter.startDate) &&
-          new Date(booking.checkout_date) <= new Date(dateFilter.endDate)
-        );
+      if (dateFilter?.startDate && dateFilter?.endDate) {
+        try {
+          const startDate = new Date(dateFilter.startDate);
+          const endDate = new Date(dateFilter.endDate);
+          
+          return customer.bookings?.some(booking => {
+            const checkinDate = new Date(booking.checkin_date);
+            const checkoutDate = new Date(booking.checkout_date);
+            return checkinDate >= startDate && checkoutDate <= endDate;
+          }) || false;
+        } catch (err) {
+          console.error('Date filter error:', err);
+          return true;
+        }
       }
       return true;
     })
@@ -523,268 +534,153 @@ const CustomerManagement = () => {
         </div>
       )}
 
-      {/* Customer Detail View Modal */}
+      {/* Customer Details Modal */}
       {showDetailModal && selectedCustomer && (
-        <div className="modal-overlay">
-          <div className="customer-detail-modal large-modal">
-            <div className="modal-header">
-              <button className="back-button" onClick={() => setShowDetailModal(false)}>
-                <RiArrowLeftLine /> Back to List
-              </button>
-              <div className="header-actions">
-                {selectedCustomer.bookings?.find(b => b.status === 'Checked-in') && (
-                  <button 
-                    className="edit-button"
-                    onClick={() => {
-                      setShowEditModal(true);
-                      setShowDetailModal(false);
-                    }}
-                  >
-                    <RiEdit2Line /> Edit Details
-                  </button>
+        <div className="modal-overlay" onClick={() => setShowDetailModal(false)}>
+          <div className="customer-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-v2">
+              <div className="header-left">
+                <h1 className="modal-title">{selectedCustomer.name}</h1>
+                {selectedCustomer.bookings?.[0]?.status === 'Checked-in' && (
+                  <span className="status-active">Currently Checked-in</span>
                 )}
               </div>
+              <button 
+                className="close-btn-v2" 
+                onClick={() => setShowDetailModal(false)}
+              >
+                <RiCloseLine />
+              </button>
             </div>
             
-            <div className="modal-content">
-              <div className="detail-form">
-                {/* Primary Guest Information */}
-                <div className="form-section">
-                  <h3 className="section-title">Guest Information</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Full Name</label>
-                      <div className="form-value">{selectedCustomer.name}</div>
+            <div className="modal-content-v2">
+              <div className="details-grid-v2">
+                {/* Guest Info Card */}
+                <div className="detail-card">
+                  <div className="card-header">
+                    <RiPhoneLine className="card-icon" />
+                    <h3>Contact Information</h3>
+                  </div>
+                  <div className="card-content">
+                    <div className="detail-row">
+                      <span className="detail-label">Phone</span>
+                      <span className="detail-value">{selectedCustomer.phone}</span>
                     </div>
-                    <div className="form-group">
-                      <label>Phone Number</label>
-                      <div className="form-value">
-                        <RiPhoneLine className="form-icon" />
-                        {selectedCustomer.phone || 'Not provided'}
-                      </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Email</span>
+                      <span className="detail-value">{selectedCustomer.email || '—'}</span>
                     </div>
-                    <div className="form-group">
-                      <label>Email Address</label>
-                      <div className="form-value">
-                        <RiMailLine className="form-icon" />
-                        {selectedCustomer.email || 'Not provided'}
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label>ID Proof</label>
-                      <div className="form-value">
-                        <RiIdCardLine className="form-icon" />
-                        {selectedCustomer.id_proof || 'Not provided'}
-                      </div>
+                    <div className="detail-row">
+                      <span className="detail-label">ID Proof</span>
+                      <span className="detail-value">{selectedCustomer.id_proof || '—'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Current/Latest Stay */}
+                {/* Current Stay Card */}
                 {selectedCustomer.bookings?.[0] && (
-                  <div className="form-section">
-                    <h3 className="section-title">
-                      {selectedCustomer.bookings[0].status === 'Checked-in' 
-                        ? 'Current Stay Details' 
-                        : 'Latest Stay Details'
-                      }
-                    </h3>
-                    
-                    <div className="booking-card">
-                      <div className="booking-header">
-                        <div className="booking-title">
-                          <h4>Booking #{selectedCustomer.bookings[0].booking_id}</h4>
-                          <span className={`status-badge ${selectedCustomer.bookings[0].status.toLowerCase()}`}>
-                            {selectedCustomer.bookings[0].status}
-                          </span>
-                        </div>
-                        <div className="booking-payment">
-                          <span className="amount">₹{selectedCustomer.bookings[0].total_amount}</span>
-                          <span className={`payment-badge ${selectedCustomer.bookings[0].payment_status?.toLowerCase()}`}>
-                            {selectedCustomer.bookings[0].payment_status}
-                          </span>
-                        </div>
+                  <>
+                    <div className="detail-card">
+                      <div className="card-header">
+                        <RiHotelLine className="card-icon" />
+                        <h3>Current Stay</h3>
                       </div>
-
-                      <div className="stay-info">
-                        <div className="info-group">
-                          <label>Check-in Date</label>
-                          <div className="value">
+                      <div className="card-content">
+                        <div className="detail-row">
+                          <span className="detail-label">Room</span>
+                          <span className="detail-value">
+                            {selectedCustomer.bookings[0].rooms?.[0]?.room_number || '—'} 
+                            {selectedCustomer.bookings[0].rooms?.[0]?.room_type && ` (${selectedCustomer.bookings[0].rooms[0].room_type})`}
+                          </span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Check-in</span>
+                          <span className="detail-value">
                             {format(new Date(selectedCustomer.bookings[0].checkin_date), 'dd MMM yyyy')}
-                          </div>
+                          </span>
                         </div>
-                        <div className="info-group">
-                          <label>Check-out Date</label>
-                          <div className="value">
-                            {selectedCustomer.bookings[0].checkout_date 
-                              ? format(new Date(selectedCustomer.bookings[0].checkout_date), 'dd MMM yyyy')
-                              : 'Not checked out'
-                            }
-                          </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Check-out</span>
+                          <span className="detail-value">
+                            {format(new Date(selectedCustomer.bookings[0].checkout_date), 'dd MMM yyyy')}
+                          </span>
                         </div>
-                        <div className="info-group">
-                          <label>Total Nights</label>
-                          <div className="value">
-                            {Math.ceil((new Date(selectedCustomer.bookings[0].checkout_date || new Date()) - 
+                        <div className="detail-row">
+                          <span className="detail-label">Duration</span>
+                          <span className="detail-value">
+                            {Math.ceil((new Date(selectedCustomer.bookings[0].checkout_date) - 
                               new Date(selectedCustomer.bookings[0].checkin_date)) / (1000 * 60 * 60 * 24))} nights
-                          </div>
+                          </span>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Room Details */}
-                      <div className="rooms-section">
-                        <h4>Room Details</h4>
-                        <div className="rooms-grid">
-                          {selectedCustomer.bookings[0].rooms.map((room, index) => (
-                            <div key={index} className="room-card">
-                              <div className="room-header">Room {room.room_number}</div>
-                              <div className="room-details">
-                                <div className="room-info">
-                                  <span className="label">Type:</span>
-                                  <span>{room.room_type}</span>
-                                </div>
-                                <div className="room-info">
-                                  <span className="label">Price/Night:</span>
-                                  <span>₹{room.price_per_night}</span>
-                                </div>
+                    {/* Additional Guests Card */}
+                    {selectedCustomer.bookings[0].additional_guests?.length > 0 && (
+                      <div className="detail-card">
+                        <div className="card-header">
+                          <RiGroupLine className="card-icon" />
+                          <h3>Additional Guests ({selectedCustomer.bookings[0].additional_guests.length})</h3>
+                        </div>
+                        <div className="card-content guests-list">
+                          {selectedCustomer.bookings[0].additional_guests.map((guest, index) => (
+                            <div key={index} className="guest-item">
+                              <div className="guest-number">{index + 1}</div>
+                              <div className="guest-details-v2">
+                                <div className="guest-name-v2">{guest.guest_name}</div>
+                                <div className="guest-phone-v2">{guest.phone}</div>
+                                {guest.id_proof && <div className="guest-id-v2">{guest.id_proof}</div>}
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
+                    )}
+                  </>
+                )}
 
-                      {/* Additional Guests */}
-                      {selectedCustomer.bookings[0].additional_guests?.length > 0 && (
-                        <div className="additional-guests-section">
-                          <h4>Additional Guests</h4>
-                          <div className="guests-grid">
-                            {selectedCustomer.bookings[0].additional_guests.map((guest, index) => (
-                              <div key={index} className="guest-card">
-                                <div className="guest-info">
-                                  <div className="form-group">
-                                    <label>Guest Name</label>
-                                    <div className="form-value">{guest.guest_name}</div>
-                                  </div>
-                                  {guest.phone && (
-                                    <div className="form-group">
-                                      <label>Phone Number</label>
-                                      <div className="form-value">
-                                        <RiPhoneLine className="form-icon" />
-                                        {guest.phone}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {guest.id_proof && (
-                                    <div className="form-group">
-                                      <label>ID Proof</label>
-                                      <div className="form-value">
-                                        <RiIdCardLine className="form-icon" />
-                                        {guest.id_proof}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                {/* Stay History Card */}
+                {selectedCustomer.bookings?.length > 1 && (
+                  <div className="detail-card full-width">
+                    <div className="card-header">
+                      <RiHistoryLine className="card-icon" />
+                      <h3>Previous Stays ({selectedCustomer.bookings.length - 1})</h3>
+                    </div>
+                    <div className="card-content history-list-v2">
+                      {selectedCustomer.bookings?.slice(1).map((booking, index) => (
+                        <div key={index} className="history-item-v2">
+                          <div className="history-dates">
+                            {format(new Date(booking.checkin_date), 'dd MMM yyyy')} — {format(new Date(booking.checkout_date), 'dd MMM yyyy')}
+                          </div>
+                          <div className="history-rooms">
+                            {booking.rooms.map((room, idx) => (
+                              <span key={idx} className="room-badge">Room {room.room_number}</span>
                             ))}
                           </div>
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 )}
-
-                {/* Stay History */}
-                <div className="form-section">
-                  <h3 className="section-title">Stay History</h3>
-                  <div className="history-grid">
-                    {selectedCustomer.bookings?.slice(1).map((booking, index) => (
-                      <div key={index} className="booking-card">
-                        <div className="booking-header">
-                          <div className="booking-title">
-                            <h4>Booking #{booking.booking_id}</h4>
-                            <span className={`status-badge ${booking.status.toLowerCase()}`}>
-                              {booking.status}
-                            </span>
-                          </div>
-                          <div className="booking-payment">
-                            <span className="amount">₹{booking.total_amount}</span>
-                            <span className={`payment-badge ${booking.payment_status?.toLowerCase()}`}>
-                              {booking.payment_status}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="booking-dates">
-                          <div className="date-group">
-                            <label>Check-in</label>
-                            <div className="date">
-                              {format(new Date(booking.checkin_date), 'dd MMM yyyy')}
-                            </div>
-                          </div>
-                          <div className="divider">→</div>
-                          <div className="date-group">
-                            <label>Check-out</label>
-                            <div className="date">
-                              {booking.checkout_date 
-                                ? format(new Date(booking.checkout_date), 'dd MMM yyyy')
-                                : 'Not checked out'
-                              }
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="rooms-section">
-                          <h5>Room Details</h5>
-                          <div className="rooms-grid">
-                            {booking.rooms.map((room, roomIndex) => (
-                              <div key={roomIndex} className="room-card">
-                                <div className="room-details">
-                                  <div className="room-number">Room {room.room_number}</div>
-                                  <div className="room-type">{room.room_type}</div>
-                                  <div className="room-price">₹{room.price_per_night}/night</div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {booking.additional_guests?.length > 0 && (
-                          <div className="guests-section">
-                            <h5>Additional Guests</h5>
-                            <div className="guests-grid">
-                              {booking.additional_guests.map((guest, index) => (
-                                <div key={index} className="guest-card">
-                                  <div className="guest-header">
-                                    <div className="guest-name">{guest.guest_name}</div>
-                                  </div>
-                                  <div className="guest-details">
-                                    {guest.phone && (
-                                      <div className="guest-info">
-                                        <RiPhoneLine className="guest-icon" />
-                                        {guest.phone}
-                                      </div>
-                                    )}
-                                    {guest.id_proof && (
-                                      <div className="guest-info">
-                                        <RiIdCardLine className="guest-icon" />
-                                        {guest.id_proof}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div className="modal-footer">
-              <button className="close-button" onClick={() => setShowDetailModal(false)}>
+            <div className="modal-footer-v2">
+              {selectedCustomer.bookings?.find(b => b.status === 'Checked-in') && (
+                <button 
+                  className="btn-edit-v2"
+                  onClick={() => {
+                    setShowEditModal(true);
+                    setShowDetailModal(false);
+                  }}
+                >
+                  <RiEdit2Line /> Edit Details
+                </button>
+              )}
+              <button 
+                className="btn-close-v2"
+                onClick={() => setShowDetailModal(false)}
+              >
                 Close
               </button>
             </div>
@@ -794,97 +690,138 @@ const CustomerManagement = () => {
 
       {/* Edit Modal */}
       {showEditModal && selectedCustomer && (
-        <div className="modal-overlay">
-          <div className="customer-detail-modal">
-            <div className="modal-header">
-              <h2>Edit Customer Details</h2>
-              <button className="close-button" onClick={() => setShowEditModal(false)}>
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="edit-modal-v2" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-v2">
+              <h1 className="modal-title">Edit Customer Details</h1>
+              <button 
+                className="close-btn-v2" 
+                onClick={() => setShowEditModal(false)}
+              >
                 <RiCloseLine />
               </button>
             </div>
             
-            <div className="modal-content">
-              <form className="customer-form" onSubmit={handleUpdateCustomer}>
-                {/* Primary Guest Information */}
-                <div className="form-section">
-                  <h3>Primary Guest Information</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label htmlFor="name">Full Name</label>
+            <div className="modal-content-v2 edit-content">
+              <form className="edit-form-v2" onSubmit={handleUpdateCustomer}>
+                {/* Primary Guest Section */}
+                <div className="form-section-v2">
+                  <div className="section-header">
+                    <RiPhoneLine className="section-icon" />
+                    <h3>Guest Information</h3>
+                  </div>
+                  
+                  <div className="form-fields-grid">
+                    <div className="form-field-v2">
+                      <label htmlFor="name">Full Name *</label>
                       <input 
                         type="text"
                         id="name"
                         name="name"
                         defaultValue={selectedCustomer.name}
+                        placeholder="Enter full name"
                         required
+                        minLength={2}
+                        pattern="[a-zA-Z\s]+"
+                        title="Name should contain only letters and spaces"
                       />
+                      <small className="help-text">Minimum 2 characters</small>
                     </div>
-                    <div className="form-group">
-                      <label htmlFor="phone">Phone Number</label>
+
+                    <div className="form-field-v2">
+                      <label htmlFor="phone">Phone Number *</label>
                       <input 
                         type="tel"
                         id="phone"
                         name="phone"
                         defaultValue={selectedCustomer.phone}
+                        placeholder="10-digit phone number"
                         required
+                        pattern="[0-9]{10}"
+                        title="Phone should be 10 digits"
                       />
+                      <small className="help-text">10-digit number required</small>
                     </div>
-                    <div className="form-group">
+
+                    <div className="form-field-v2">
                       <label htmlFor="email">Email Address</label>
                       <input 
                         type="email"
                         id="email"
                         name="email"
-                        defaultValue={selectedCustomer.email}
+                        defaultValue={selectedCustomer.email || ''}
+                        placeholder="example@email.com"
+                        pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                        title="Please enter a valid email address"
                       />
+                      <small className="help-text">Optional - valid format required</small>
                     </div>
-                    <div className="form-group">
+
+                    <div className="form-field-v2">
                       <label htmlFor="id_proof">ID Proof</label>
                       <input 
                         type="text"
                         id="id_proof"
                         name="id_proof"
-                        defaultValue={selectedCustomer.id_proof}
+                        defaultValue={selectedCustomer.id_proof || ''}
+                        placeholder="Passport, Aadhar, Driving License, etc."
                       />
+                      <small className="help-text">Optional</small>
                     </div>
                   </div>
                 </div>
 
-                {/* Current Stay Additional Guests */}
+                {/* Additional Guests Section */}
                 {selectedCustomer.bookings?.[0]?.additional_guests?.length > 0 && (
-                  <div className="form-section">
-                    <h3>Additional Guests</h3>
-                    <div className="guests-grid">
+                  <div className="form-section-v2">
+                    <div className="section-header">
+                      <RiGroupLine className="section-icon" />
+                      <h3>Additional Guests ({selectedCustomer.bookings[0].additional_guests.length})</h3>
+                    </div>
+
+                    <div className="guests-form-grid">
                       {selectedCustomer.bookings[0].additional_guests.map((guest, index) => (
-                        <div key={index} className="guest-card">
-                          <div className="guest-info">
-                            <div className="form-group">
-                              <label htmlFor={`guest_name_${index}`}>Guest Name</label>
+                        <div key={index} className="guest-form-card">
+                          <div className="guest-form-header">Guest {index + 1}</div>
+                          
+                          <div className="guest-form-fields">
+                            <div className="form-field-v2 small">
+                              <label htmlFor={`guest_name_${index}`}>Name *</label>
                               <input 
                                 type="text"
                                 id={`guest_name_${index}`}
                                 name={`additional_guests[${index}].guest_name`}
                                 defaultValue={guest.guest_name}
+                                placeholder="Guest name"
                                 required
+                                minLength={2}
+                                pattern="[a-zA-Z\s]+"
+                                title="Name should contain only letters and spaces"
                               />
                             </div>
-                            <div className="form-group">
-                              <label htmlFor={`guest_phone_${index}`}>Phone Number</label>
+
+                            <div className="form-field-v2 small">
+                              <label htmlFor={`guest_phone_${index}`}>Phone *</label>
                               <input 
                                 type="tel"
                                 id={`guest_phone_${index}`}
                                 name={`additional_guests[${index}].phone`}
                                 defaultValue={guest.phone}
+                                placeholder="10-digit"
                                 required
+                                pattern="[0-9]{10}"
+                                title="Phone should be 10 digits"
                               />
                             </div>
-                            <div className="form-group">
+
+                            <div className="form-field-v2 small">
                               <label htmlFor={`guest_id_proof_${index}`}>ID Proof</label>
                               <input 
                                 type="text"
                                 id={`guest_id_proof_${index}`}
                                 name={`additional_guests[${index}].id_proof`}
-                                defaultValue={guest.id_proof}
+                                defaultValue={guest.id_proof || ''}
+                                placeholder="ID Proof"
                               />
                             </div>
                           </div>
@@ -894,316 +831,26 @@ const CustomerManagement = () => {
                   </div>
                 )}
 
-                <div className="modal-footer">
-                  <button type="submit" className="save-button">
-                    <RiSave3Line /> Save Changes
-                  </button>
-                  <button type="button" className="cancel-button" onClick={() => setShowEditModal(false)}>
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Customer Details Modal */}
-      {showDetailModal && selectedCustomer && (
-        <div className="modal-overlay">
-          <div className="customer-detail-modal large-modal">
-            <div className="modal-header">
-              <button className="back-button" onClick={() => setShowDetailModal(false)}>
-                <RiArrowLeftLine /> Back to List
-              </button>
-              <h2>Customer Details</h2>
-              {selectedCustomer.bookings?.find(b => b.status === 'Checked-in') && (
-                <button 
-                  className="edit-button"
-                  onClick={() => {
-                    setShowEditModal(true);
-                    setShowDetailModal(false);
-                  }}
-                >
-                  <RiEdit2Line /> Edit Details
-                </button>
-              )}
-            </div>
-            
-            <div className="modal-content">
-              <div className="customer-form">
-                {/* Primary Guest Information */}
-                <div className="form-section">
-                  <h3>Primary Guest Information</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Full Name</label>
-                      <div className="form-value">{selectedCustomer.name}</div>
-                    </div>
-                    <div className="form-group">
-                      <label>Phone Number</label>
-                      <div className="form-value">{selectedCustomer.phone}</div>
-                    </div>
-                    <div className="form-group">
-                      <label>Email Address</label>
-                      <div className="form-value">{selectedCustomer.email || 'Not provided'}</div>
-                    </div>
-                    <div className="form-group">
-                      <label>ID Proof</label>
-                      <div className="form-value">{selectedCustomer.id_proof || 'Not provided'}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Current/Latest Stay */}
-                {selectedCustomer.bookings?.[0] && (
-                  <div className="form-section">
-                    <h3>
-                      {selectedCustomer.bookings[0].status === 'Checked-in' 
-                        ? 'Current Stay Details' 
-                        : 'Latest Stay Details'
-                      }
-                    </h3>
-                    <div className="stay-status">
-                      <span className={`status-badge status-${selectedCustomer.bookings[0].status.toLowerCase()}`}>
-                        {selectedCustomer.bookings[0].status}
-                      </span>
-                    </div>
-                    
-                    {/* Room Information */}
-                    <div className="rooms-section">
-                      <h4>Room Details</h4>
-                      <div className="rooms-grid">
-                        {selectedCustomer.bookings[0].rooms.map((room, index) => (
-                          <div key={index} className="room-card">
-                            <div className="room-header">Room {room.room_number}</div>
-                            <div className="room-details">
-                              <div className="room-info">
-                                <span className="label">Type:</span>
-                                <span>{room.room_type}</span>
-                              </div>
-                              <div className="room-info">
-                                <span className="label">Price/Night:</span>
-                                <span>₹{room.price_per_night}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Stay Duration */}
-                    <div className="stay-info">
-                      <div className="info-group">
-                        <label>Check-in Date</label>
-                        <div className="value">
-                          {format(new Date(selectedCustomer.bookings[0].checkin_date), 'dd MMM yyyy')}
-                        </div>
-                      </div>
-                      <div className="info-group">
-                        <label>Check-out Date</label>
-                        <div className="value">
-                          {format(new Date(selectedCustomer.bookings[0].checkout_date), 'dd MMM yyyy')}
-                        </div>
-                      </div>
-                      <div className="info-group">
-                        <label>Total Nights</label>
-                        <div className="value">
-                          {Math.ceil((new Date(selectedCustomer.bookings[0].checkout_date) - 
-                            new Date(selectedCustomer.bookings[0].checkin_date)) / (1000 * 60 * 60 * 24))} nights
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Additional Guests */}
-                    {selectedCustomer.bookings[0].additional_guests?.length > 0 && (
-                      <div className="additional-guests-section">
-                        <h4>Additional Guests</h4>
-                        <div className="guests-grid">
-                          {selectedCustomer.bookings[0].additional_guests.map((guest, index) => (
-                            <div key={index} className="guest-card">
-                              <div className="guest-info">
-                                <div className="form-group">
-                                  <label>Guest Name</label>
-                                  <div className="form-value">{guest.guest_name}</div>
-                                </div>
-                                <div className="form-group">
-                                  <label>Phone Number</label>
-                                  <div className="form-value">{guest.phone}</div>
-                                </div>
-                                {guest.id_proof && (
-                                  <div className="form-group">
-                                    <label>ID Proof</label>
-                                    <div className="form-value">{guest.id_proof}</div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Stay History */}
-                <div className="form-section">
-                  <h3>Stay History</h3>
-                  <div className="history-grid">
-                    {selectedCustomer.bookings?.slice(1).map((booking, index) => (
-                      <div key={index} className="history-card">
-                        <div className="history-header">
-                          <div className="date-range">
-                            {format(new Date(booking.checkin_date), 'dd MMM yyyy')} - 
-                            {format(new Date(booking.checkout_date), 'dd MMM yyyy')}
-                          </div>
-                          <span className={`status-badge status-${booking.status.toLowerCase()}`}>
-                            {booking.status}
-                          </span>
-                        </div>
-                        <div className="rooms-list">
-                          {booking.rooms.map((room, roomIndex) => (
-                            <div key={roomIndex} className="history-room-info">
-                              <span>Room {room.room_number}</span>
-                              <span className="separator">•</span>
-                              <span>{room.room_type}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {booking.additional_guests?.length > 0 && (
-                          <div className="history-guests">
-                            <small>Additional Guests: {booking.additional_guests.map(g => g.guest_name).join(', ')}</small>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {showEditModal && selectedCustomer && (
-        <div className="modal-overlay">
-          <div className="customer-detail-modal large-modal">
-            <div className="modal-header">
-              <button className="back-button" onClick={() => {
-                setShowEditModal(false);
-                setShowDetailModal(true);
-              }}>
-                <RiArrowLeftLine /> Back to Details
-              </button>
-              <h2>Edit Customer Details</h2>
-            </div>
-            
-            <div className="modal-content">
-              <form className="customer-form" onSubmit={handleUpdateCustomer}>
-                {/* Primary Guest Information */}
-                <div className="form-section">
-                  <h3>Primary Guest Information</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label htmlFor="name">Full Name</label>
-                      <input 
-                        type="text"
-                        id="name"
-                        name="name"
-                        defaultValue={selectedCustomer.name}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="phone">Phone Number</label>
-                      <input 
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        defaultValue={selectedCustomer.phone}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="email">Email Address</label>
-                      <input 
-                        type="email"
-                        id="email"
-                        name="email"
-                        defaultValue={selectedCustomer.email}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="id_proof">ID Proof</label>
-                      <input 
-                        type="text"
-                        id="id_proof"
-                        name="id_proof"
-                        defaultValue={selectedCustomer.id_proof}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Current Stay Additional Guests */}
-                {selectedCustomer.bookings?.[0]?.additional_guests?.length > 0 && (
-                  <div className="form-section">
-                    <h3>Additional Guests</h3>
-                    <div className="guests-grid">
-                      {selectedCustomer.bookings[0].additional_guests.map((guest, index) => (
-                        <div key={index} className="guest-card">
-                          <div className="guest-info">
-                            <div className="form-group">
-                              <label htmlFor={`guest_name_${index}`}>Guest Name</label>
-                              <input 
-                                type="text"
-                                id={`guest_name_${index}`}
-                                name={`additional_guests[${index}].guest_name`}
-                                defaultValue={guest.guest_name}
-                                required
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label htmlFor={`guest_phone_${index}`}>Phone Number</label>
-                              <input 
-                                type="tel"
-                                id={`guest_phone_${index}`}
-                                name={`additional_guests[${index}].phone`}
-                                defaultValue={guest.phone}
-                                required
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label htmlFor={`guest_id_proof_${index}`}>ID Proof</label>
-                              <input 
-                                type="text"
-                                id={`guest_id_proof_${index}`}
-                                name={`additional_guests[${index}].id_proof`}
-                                defaultValue={guest.id_proof}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="action-buttons">
-                  <button type="submit" className="save-button">
+                {/* Form Actions */}
+                <div className="form-actions-v2">
+                  <button 
+                    type="submit" 
+                    className="btn-submit-v2"
+                  >
                     <RiSave3Line /> Save Changes
                   </button>
                   <button 
                     type="button" 
-                    className="cancel-button" 
-                    onClick={() => {
-                      setShowEditModal(false);
-                      setShowDetailModal(true);
-                    }}
+                    className="btn-cancel-v2"
+                    onClick={() => setShowEditModal(false)}
                   >
                     Cancel
                   </button>
+                </div>
+
+                {/* Info Message */}
+                <div className="form-info-v2">
+                  Fields marked with * are required
                 </div>
               </form>
             </div>

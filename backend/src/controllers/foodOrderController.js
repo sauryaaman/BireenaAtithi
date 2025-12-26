@@ -127,13 +127,64 @@ const createOrder = async (req, res) => {
 
     // Update order total - amount_due equals total initially
     // Payment will be recorded separately via payment transaction API which will update amount_paid
-    await supabase
+    const { data: updatedOrder, error: updateError } = await supabase
       .from('food_orders')
       .update({ 
         total_amount: totalAmount,
         amount_due: totalAmount
       })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .select();
+
+    if (updateError) {
+      console.error('❌ Error updating order total:', updateError);
+      return res.status(500).json({ error: 'Failed to update order total', details: updateError.message });
+    }
+
+    // Create KOT history entry for this initial order
+    // Enrich orderItems with menu item names
+    const enrichedItems = [];
+    for (const item of orderItems || []) {
+      const { data: menuItem } = await supabase
+        .from('menu_items')
+        .select('id, name')
+        .eq('id', item.menu_item_id)
+        .single();
+
+      enrichedItems.push({
+        id: item.id,
+        menu_item_id: item.menu_item_id,
+        name: menuItem?.name || item.menu_item_id,
+        quantity: item.quantity,
+        price: item.price
+      });
+    }
+
+    const kotData = {
+      food_order_id: orderId,
+      booking_id: bookingId,
+      user_id: userIdInt,
+      kot_type: 'initial',
+      total_items: enrichedItems.length,
+      total_amount: totalAmount,
+      amount_paid: 0,
+      amount_due: totalAmount,
+      items_snapshot: enrichedItems,
+      new_items_snapshot: null,
+      kot_date: new Date().toISOString()
+    };
+
+    const { data: kotEntry, error: kotError } = await supabase
+      .from('food_order_history')
+      .insert([kotData])
+      .select();
+
+    if (kotError) {
+      console.error('Warning: Could not create KOT history entry:', kotError);
+      // Don't fail the order creation if KOT history fails
+    } else {
+      console.log('✅ Initial KOT history created:', kotEntry?.[0]?.id);
+    }
 
     // console.log('💰 Order total set:', { orderId, total_amount: totalAmount, amount_paid: 0, amount_due: totalAmount });
     
@@ -144,7 +195,7 @@ const createOrder = async (req, res) => {
     // console.log('Booking ID:', bookingId);
     // console.log('Total Amount: ₹' + totalAmount.toFixed(2));
     // console.log('Amount Paid: ₹' + (amount_paid || 0).toFixed(2));
-    // console.log('Amount Due: ₹' + finalAmountDue.toFixed(2));
+    // console.log('Amount Due: ₹' + totalAmount.toFixed(2));
     // console.log('Total Items:', orderItems?.length || 0);
     
     orderItems?.forEach((item, idx) => {
@@ -154,7 +205,7 @@ const createOrder = async (req, res) => {
     // console.log('='.repeat(70) + '\n');
 
     res.json({ 
-      order: { ...newOrder[0], total_amount: totalAmount, amount_paid: 0, amount_due: totalAmount }, 
+      order: updatedOrder[0] || { ...newOrder[0], total_amount: totalAmount, amount_paid: 0, amount_due: totalAmount }, 
       items: orderItems, 
       total_amount: totalAmount,
       amount_paid: 0,
@@ -221,7 +272,25 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    // Process items
+    // First, get all existing items in the order
+    const { data: existingItems, error: existingError } = await supabase
+      .from('food_order_items')
+      .select('*')
+      .eq('order_id', orderId);
+
+    if (existingError) {
+      console.error('Error fetching existing items:', existingError);
+    }
+
+    // Track which existing items are being modified
+    const existingItemsMap = new Map();
+    if (existingItems && existingItems.length > 0) {
+      for (const item of existingItems) {
+        existingItemsMap.set(item.id, item);
+      }
+    }
+
+    // Process items and prepare modifications
     let totalAmount = 0;
     const itemsToInsert = [];
     const itemsToDelete = [];
@@ -239,6 +308,7 @@ const updateOrder = async (req, res) => {
       if (quantity === 0 && itemId) {
         // console.log(`  ❌ DELETE: Marking item ${itemId} for deletion`);
         itemsToDelete.push(itemId);
+        existingItemsMap.delete(itemId);  // Remove from map since it's being deleted
         continue;
       }
 
@@ -262,12 +332,13 @@ const updateOrder = async (req, res) => {
 
       const price = menuItem.price;
       const itemTotal = price * quantity;
-      totalAmount += itemTotal;
 
       if (itemId) {
         // UPDATE existing item
         // console.log(`  ✏️  UPDATE: item ${itemId}, qty=${quantity}, price=${price}, total=${itemTotal}`);
         itemsToUpdate.push({ itemId, quantity, price });
+        // Mark this item as updated in the map
+        existingItemsMap.set(itemId, { ...existingItemsMap.get(itemId), quantity, price });
       } else {
         // ADD new item (no itemId means it's a new item being added to order)
         // console.log(`  ➕ INSERT: menu_item_id=${menu_item_id}, qty=${quantity}, price=${price}, total=${itemTotal}`);
@@ -280,7 +351,20 @@ const updateOrder = async (req, res) => {
       }
     }
 
-    // console.log(`📊 Summary: ${itemsToUpdate.length} updates, ${itemsToInsert.length} inserts, ${itemsToDelete.length} deletes`);
+    // Now calculate the total from:
+    // 1. Existing items that remain unchanged (still in map, not deleted or updated)
+    // 2. Updated items (updated quantities/prices)
+    // 3. Newly inserted items
+    for (const item of existingItemsMap.values()) {
+      totalAmount += (item.quantity * item.price);
+    }
+    
+    // Add new items total
+    for (const item of itemsToInsert) {
+      totalAmount += (item.quantity * item.price);
+    }
+
+    // console.log(`📊 Summary: ${itemsToUpdate.length} updates, ${itemsToInsert.length} inserts, ${itemsToDelete.length} deletes, Total: ₹${totalAmount.toFixed(2)}`);
 
     // UPDATE existing items
     for (const item of itemsToUpdate) {
@@ -355,6 +439,66 @@ const updateOrder = async (req, res) => {
       })
       .eq('id', orderId);
 
+    // Create KOT history entry if new items were added (additions)
+    if (itemsToInsert.length > 0) {
+      console.log('🔍 itemsToInsert count:', itemsToInsert.length);
+      itemsToInsert.forEach((item, idx) => {
+        console.log(`  [${idx}] menu_item_id=${item.menu_item_id}, qty=${item.quantity}`);
+      });
+
+      // Fetch menu item details to get names for the new items
+      const enrichedNewItems = [];
+      for (const item of itemsToInsert) {
+        const { data: menuItem } = await supabase
+          .from('menu_items')
+          .select('id, name')
+          .eq('id', item.menu_item_id)
+          .single();
+
+        enrichedNewItems.push({
+          menu_item_id: item.menu_item_id,
+          name: menuItem?.name || item.menu_item_id,
+          quantity: item.quantity,
+          price: item.price
+        });
+      }
+
+      console.log('💾 enrichedNewItems count:', enrichedNewItems.length);
+      enrichedNewItems.forEach((item, idx) => {
+        console.log(`  [${idx}] ${item.name} (x${item.quantity})`);
+      });
+
+      let userId = req.user.user_id || req.user.id;
+      const userIdInt = typeof userId === 'string' && /^\d+$/.test(userId) ? parseInt(userId, 10) : userId;
+      
+      const kotData = {
+        food_order_id: orderId,
+        booking_id: order.booking_id,
+        user_id: userIdInt,
+        kot_type: 'additions',
+        total_items: enrichedNewItems.length,
+        total_amount: totalAmount,
+        amount_paid: currentAmountPaid,
+        amount_due: finalAmountDue,
+        items_snapshot: null,
+        new_items_snapshot: enrichedNewItems,
+        kot_date: new Date().toISOString()
+      };
+
+      const { data: kotEntry, error: kotError } = await supabase
+        .from('food_order_history')
+        .insert([kotData])
+        .select();
+
+      if (kotError) {
+        console.error('Warning: Could not create KOT history entry for additions:', kotError);
+        // Don't fail the update if KOT history fails
+      } else {
+        console.log('✅ Additions KOT history created:', kotEntry?.[0]?.id);
+        console.log('   Items in this KOT:', enrichedNewItems.map(i => `${i.name} (x${i.quantity})`).join(', '));
+      }
+    }
+
     // console.log('💰 Order total updated:', { orderId, total_amount: totalAmount, amount_paid: currentAmountPaid, amount_due: finalAmountDue });
 
     // Get updated order with items
@@ -381,7 +525,9 @@ const updateOrder = async (req, res) => {
     res.json({ 
       message: 'Order updated', 
       order: { ...order, total_amount: totalAmount, amount_paid: currentAmountPaid, amount_due: finalAmountDue }, 
-      items: updatedItems 
+      items: updatedItems,
+      newItems: itemsToInsert,  // Return newly added items for KOT printing
+      newItemsCount: itemsToInsert.length
     });
   } catch (err) {
     console.error('❌ Error in updateOrder:', err);
@@ -517,10 +663,200 @@ const checkOrderExists = async (req, res) => {
   }
 };
 
+// PRINT KOT - Create a KOT snapshot and record in history
+// Can be called for initial order or for new additions
+const printKOT = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { newItems, kotType } = req.body; // newItems optional, kotType: 'initial' or 'additions'
+    let userId = req.user.user_id || req.user.id;
+
+    // console.log('=== printKOT called ===');
+    // console.log('orderId:', orderId, 'kotType:', kotType, 'newItems:', newItems?.length);
+
+    if (!orderId) {
+      return res.status(400).json({ error: 'Order ID is required' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Fetch current order
+    const { data: order, error: orderError } = await supabase
+      .from('food_orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      console.error('Order not found:', orderError);
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Fetch current order items with proper data structure
+    const { data: orderItems, error: itemsError } = await supabase
+      .from('food_order_items')
+      .select(`
+        id,
+        order_id,
+        menu_item_id,
+        quantity,
+        price,
+        menu_items (
+          id,
+          name,
+          category,
+          description
+        )
+      `)
+      .eq('order_id', orderId);
+
+    if (itemsError) {
+      console.error('Error fetching items:', itemsError);
+      return res.status(500).json({ error: 'Failed to fetch order items' });
+    }
+
+    // Enrich items with menu item names for snapshot storage
+    const enrichedOrderItems = orderItems?.map(item => ({
+      id: item.id,
+      menu_item_id: item.menu_item_id,
+      name: item.menu_items?.[0]?.name || item.menu_item_id,
+      quantity: item.quantity,
+      price: item.price,
+      category: item.menu_items?.[0]?.category
+    })) || [];
+
+    // Enrich newItems with complete data if provided
+    const enrichedNewItems = newItems?.map(item => ({
+      menu_item_id: item.menu_item_id,
+      name: item.name || item.menu_item_id,
+      quantity: item.quantity,
+      price: item.price
+    })) || [];
+
+    // NOTE: KOT history entry is already created in updateOrder() when items are added
+    // DO NOT create another entry here to avoid duplicates
+    // This function now only returns the KOT data for the print window
+    
+    const userIdInt = typeof userId === 'string' && /^\d+$/.test(userId) ? parseInt(userId, 10) : userId;
+    
+    // Just prepare the response without creating another KOT history entry
+    const kotTypeValue = kotType === 'additions' ? 'additions' : 'initial';
+
+    // Return KOT data for printing (but don't create a new history entry)
+    res.json({
+      message: 'KOT data retrieved for printing',
+      order,
+      items: kotTypeValue === 'additions' ? enrichedNewItems : enrichedOrderItems,
+      kotType: kotTypeValue
+    });
+  } catch (err) {
+    console.error('❌ Error in printKOT:', err);
+    res.status(500).json({ error: 'Failed to print KOT', details: err.message });
+  }
+};
+
+// GET KOT HISTORY - Get all KOT records for an order or booking
+const getKOTHistory = async (req, res) => {
+  try {
+    const { booking_id } = req.params;
+
+    // console.log('=== getKOTHistory called ===');
+    // console.log('booking_id:', booking_id);
+
+    if (!booking_id) {
+      return res.status(400).json({ error: 'Booking ID is required' });
+    }
+
+    const bookingId = parseInt(booking_id, 10);
+
+    // First, fetch the order to get its creation date (for initial items)
+    const { data: order, error: orderError } = await supabase
+      .from('food_orders')
+      .select('id, created_at')
+      .eq('booking_id', bookingId)
+      .single();
+
+    // Fetch all KOT records for this booking, ordered by date (latest first)
+    const { data: kotHistory, error: historyError } = await supabase
+      .from('food_order_history')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .order('kot_date', { ascending: false });
+
+    if (historyError) {
+      console.error('Error fetching KOT history:', historyError);
+      return res.status(500).json({ error: 'Failed to fetch KOT history', details: historyError.message });
+    }
+
+    console.log(`📋 KOT history for booking ${bookingId}: Found ${kotHistory?.length || 0} records`);
+
+    // Don't filter duplicates - show ALL KOT records
+    const uniqueKOTs = kotHistory || [];
+
+    // Helper function to convert UTC to IST string
+    const convertToIST = (utcDate) => {
+      if (!utcDate) return 'N/A';
+      return new Date(utcDate).toLocaleString('en-IN', { 
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    };
+
+    // Convert UTC times to IST format in the response
+    const kotHistoryWithIST = uniqueKOTs.map(kot => ({
+      ...kot,
+      kot_date: convertToIST(kot.kot_date),
+      order_created_date: order?.created_at ? convertToIST(order.created_at) : 'N/A'
+    }));
+
+    // Parse items snapshots to ensure item names are shown
+    const processedHistory = kotHistoryWithIST.map(kot => {
+      let items_snapshot = [];
+      let new_items_snapshot = [];
+      
+      try {
+        if (kot.items_snapshot) {
+          items_snapshot = typeof kot.items_snapshot === 'string' ? JSON.parse(kot.items_snapshot) : kot.items_snapshot;
+        }
+        if (kot.new_items_snapshot) {
+          new_items_snapshot = typeof kot.new_items_snapshot === 'string' ? JSON.parse(kot.new_items_snapshot) : kot.new_items_snapshot;
+        }
+      } catch (e) {
+        console.error('Error parsing snapshots:', e);
+      }
+
+      return {
+        ...kot,
+        items_snapshot: items_snapshot,
+        new_items_snapshot: new_items_snapshot
+      };
+    });
+
+    // console.log('✅ KOT history retrieved:', processedHistory.length);
+
+    res.json({
+      history: processedHistory || []
+    });
+  } catch (err) {
+    console.error('❌ Error in getKOTHistory:', err);
+    res.status(500).json({ error: 'Failed to fetch KOT history', details: err.message });
+  }
+};
+
 module.exports = {
   createOrder,
   updateOrder,
   getOrderDetails,
   cancelOrder,
-  checkOrderExists
+  checkOrderExists,
+  printKOT,
+  getKOTHistory
 };

@@ -188,6 +188,18 @@ const addRoom = async (req, res) => {
             return res.status(400).json({ message: 'Room capacity must be at least 1' });
         }
 
+        // Check if room number already exists for this hotel
+        const { data: existingRoom, error: checkError } = await supabase
+            .from('rooms')
+            .select('room_id')
+            .eq('user_id', user_id)
+            .eq('room_number', room_number)
+            .single();
+
+        if (existingRoom) {
+            return res.status(400).json({ message: 'Room number already exists' });
+        }
+
         const { data: room, error } = await supabase
             .from('rooms')
             .insert([
@@ -335,9 +347,6 @@ const getRoomHistory = async (req, res) => {
     try {
         const { room_id } = req.params;
         const user_id = req.user.user_id;
-        
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         const { data: bookings, error } = await supabase
             .from('bookings')
@@ -350,7 +359,6 @@ const getRoomHistory = async (req, res) => {
                 )
             `)
             .eq('room_id', room_id)
-            .gte('checkin_date', thirtyDaysAgo.toISOString())
             .order('checkin_date', { ascending: false });
 
         if (error) throw error;

@@ -153,10 +153,46 @@ const deleteMenuItem = async (req, res) => {
   }
 };
 
+const toggleMenuItemStatus = async (req, res) => {
+  try {
+    let user_id = req.user?.user_id;
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    if (!user_id) return res.status(401).json({ message: 'Authentication required' });
+    if (typeof user_id === 'string' && /^\d+$/.test(user_id)) user_id = parseInt(user_id, 10);
+
+    // Verify ownership
+    const { data: existing, error: fetchErr } = await supabase
+      .from('menu_items')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !existing) return res.status(404).json({ message: 'Menu item not found' });
+    if (String(existing.user_id) !== String(user_id)) return res.status(403).json({ message: 'Not authorized to update this item' });
+
+    // Update status
+    const { data, error } = await supabase
+      .from('menu_items')
+      .update({ is_active })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('toggleMenuItemStatus error:', err);
+    res.status(500).json({ message: 'Failed to toggle menu item status', error: err.message });
+  }
+};
+
 module.exports = {
   createMenuItem,
   getMenuItems,
   getMenuItem,
   updateMenuItem,
   deleteMenuItem,
+  toggleMenuItemStatus,
 };

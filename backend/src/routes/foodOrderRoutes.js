@@ -6,7 +6,9 @@ const {
   updateOrder,
   getOrderDetails,
   cancelOrder,
-  checkOrderExists
+  checkOrderExists,
+  printKOT,
+  getKOTHistory
 } = require('../controllers/foodOrderController');
 
 // Check if order exists (for button display)
@@ -15,8 +17,14 @@ router.get('/check/:booking_id', auth, checkOrderExists);
 // Get order details for modal (when clicking Order Food button)
 router.get('/booking/:booking_id/details', auth, getOrderDetails);
 
+// Get KOT history for a booking
+router.get('/history/:booking_id', auth, getKOTHistory);
+
 // Create new order with items
 router.post('/create', auth, createOrder);
+
+// Print KOT (create KOT snapshot in history)
+router.post('/:orderId/print-kot', auth, printKOT);
 
 // Update existing order (add/remove/modify items)
 router.put('/:orderId', auth, updateOrder);

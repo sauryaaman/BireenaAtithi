@@ -553,7 +553,7 @@ const BookingForm = () => {
         };
 
         // Validate primary guest
-        if (!primaryGuest.name || !primaryGuest.phone || !primaryGuest.email) {
+        if (!primaryGuest.name || !primaryGuest.phone) {
           throw new Error('Please fill in all primary guest details');
         }
 
@@ -1103,7 +1103,7 @@ const BookingForm = () => {
             </div>
 
             <div className={`form-group ${validationErrors.email ? 'error' : ''}`}>
-              <label htmlFor="email">Email *</label>
+              <label htmlFor="email">Email</label>
               <input
                 type="email"
                 id="email"

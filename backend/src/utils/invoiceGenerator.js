@@ -73,21 +73,34 @@ handlebars.registerHelper('formatCurrency', function(amount) {
     }).format(amount || 0);
 });
 
-// Function to calculate split GST amounts from total
-function calculateGST(totalAmount) {
-    const baseAmount = totalAmount / 1.05; // Remove 5% GST
-    const totalGstAmount = totalAmount - baseAmount;
-    const cgstAmount = totalGstAmount / 2; // Split GST into CGST (2.5%)
-    const sgstAmount = totalGstAmount / 2; // and SGST (2.5%)
+// Function to calculate GST amounts (5% total = 2.5% CGST + 2.5% SGST)
+// REVERSE GST: grossAmount is the TOTAL amount (WITH GST included)
+// We extract the base amount by dividing by 1.05
+function calculateGST(grossAmount) {
+    console.log('Calculating REVERSE GST for gross amount:', grossAmount);
+    
+    // Extract base amount from gross amount (divide by 1.05)
+    const baseAmount = parseFloat(grossAmount) / 1.05;
+    const gstPercent = 0.05; // 5% total GST
+    const totalGstAmount = baseAmount * gstPercent; // 5% of base
+    const cgstAmount = baseAmount * 0.025; // 2.5% CGST
+    const sgstAmount = baseAmount * 0.025; // 2.5% SGST
+    const finalTotal = parseFloat(grossAmount); // Already gross/final total
+    
+    console.log('Reverse GST calculation result:', { baseAmount: baseAmount.toFixed(2), cgstAmount: cgstAmount.toFixed(2), sgstAmount: sgstAmount.toFixed(2), totalGstAmount: totalGstAmount.toFixed(2), finalTotal: finalTotal.toFixed(2) });
+    
     return {
         baseAmount: baseAmount.toFixed(2),
         cgstAmount: cgstAmount.toFixed(2),
-        sgstAmount: sgstAmount.toFixed(2)
+        sgstAmount: sgstAmount.toFixed(2),
+        totalGst: totalGstAmount.toFixed(2),
+        finalTotal: finalTotal.toFixed(2)
     };
 }
 
 // Function to generate Food Bill PDF
 async function generateFoodBillPDF(foodBillData) {
+
     let browser = null;
     try {
         const templatePath = path.join(__dirname, 'templates', 'foodBill.html');
@@ -100,7 +113,7 @@ async function generateFoodBillPDF(foodBillData) {
         
         // Calculate GST for food
         const totalAmount = parseFloat(foodBillData.foodOrder.total_amount);
-        const { baseAmount, cgstAmount, sgstAmount } = calculateGST(totalAmount);
+        const { baseAmount, cgstAmount, sgstAmount, totalGst, finalTotal } = calculateGST(totalAmount);
         
         const template = handlebars.compile(templateHtml);
         const finalHtml = template({
@@ -108,7 +121,9 @@ async function generateFoodBillPDF(foodBillData) {
             foodCalculations: {
                 baseAmount,
                 cgstAmount,
-                sgstAmount
+                sgstAmount,
+                totalGst,
+                finalTotal
             },
             currentDate: new Date().toISOString()
         });
@@ -196,14 +211,18 @@ async function generateInvoicePDF(invoiceData, foodBillData = null) {
 
         // If food bill data exists, add food bill page
         if (foodBillData) {
+            console.log('\n🍽️ FOOD BILL DATA RECEIVED:');
+            console.log('   foodBillData.foodOrder:', foodBillData.foodOrder);
             const foodTemplatePath = path.join(__dirname, 'templates', 'foodBill.html');
             
             if (fs.existsSync(foodTemplatePath)) {
                 const foodTemplateHtml = fs.readFileSync(foodTemplatePath, 'utf-8');
                 
-                // Calculate GST for food
-                const foodTotal = parseFloat(foodBillData.foodOrder.total_amount);
-                const foodGST = calculateGST(foodTotal);
+                // Calculate GST for food using total_amount (original order total, not affected by payments)
+                const foodGrossAmount = parseFloat(foodBillData.foodOrder.total_amount);
+                console.log('   Food Total Amount (original order):', foodGrossAmount);
+                const foodGST = calculateGST(foodGrossAmount);
+                console.log('   Food GST Calculated:', foodGST);
                 
                 const foodTemplate = handlebars.compile(foodTemplateHtml);
                 const foodHtml = foodTemplate({
@@ -211,13 +230,16 @@ async function generateInvoicePDF(invoiceData, foodBillData = null) {
                     foodCalculations: {
                         baseAmount: foodGST.baseAmount,
                         cgstAmount: foodGST.cgstAmount,
-                        sgstAmount: foodGST.sgstAmount
+                        sgstAmount: foodGST.sgstAmount,
+                        totalGst: foodGST.totalGst,
+                        finalTotal: foodGST.finalTotal
                     },
                     currentDate: new Date().toISOString()
                 });
 
                 // Combine both pages - room invoice first, then food bill
                 combinedHtml = roomHtml + foodHtml;
+                console.log('   ✅ Food bill page added\n');
             }
         }
 

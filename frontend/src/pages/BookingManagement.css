@@ -166,24 +166,39 @@
   gap: 10px;
 }
 
-.sort-options select {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  outline: none;
+.sort-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151;
 }
 
-.sort-options button {
+.sort-btn {
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid #d1d5db;
   border-radius: 5px;
   background: white;
   cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.sort-btn:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
 }
 
 /* Table Styles */
 .bookings-table-container {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 250px);
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Chrome, Safari and Opera */
+.bookings-table-container::-webkit-scrollbar {
+  display: none;
 }
 
 .bookings-table {
@@ -191,6 +206,29 @@
   border-collapse: collapse;
   background-color: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Sticky Header */
+.bookings-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8f9fa;
+}
+
+/* Sticky First Column (Booking ID) */
+.bookings-table td:first-child,
+.bookings-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 9;
+  background-color: white;
+}
+
+/* Sticky First Column with Header */
+.bookings-table thead th:first-child {
+  z-index: 11;
+  background-color: #f8f9fa;
 }
 
 .view-invoice-btn {
@@ -239,8 +277,19 @@
   color: #333;
 }
 
-.bookings-table tr:hover {
-  background-color: #f5f5f5;
+.bookings-table tbody tr {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.bookings-table tbody tr:hover {
+  background-color: #dbeafe;
+  box-shadow: 0 0 0 1px #60a5fa inset;
+}
+
+.bookings-table tbody tr:hover td:first-child {
+  background-color: #dbeafe;
+  box-shadow: 0 0 0 1px #60a5fa inset;
 }
 
 .customer-info,

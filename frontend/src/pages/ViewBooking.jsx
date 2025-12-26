@@ -27,8 +27,8 @@ const ViewBooking = () => {
         if (!response.data) {
           throw new Error('Invalid booking data received');
         }
-        // console.log("geting response:",response.data);
-        const { booking, customer, guests } = response.data;
+        console.log("Getting response:", response.data);
+        const { booking, customer, guests, foodOrders } = response.data;
         setBookingData(response.data);
         setLoading(false);
       } catch (err) {
@@ -66,7 +66,21 @@ const ViewBooking = () => {
 
   return (
     <div className="booking-details">
-      <div className="header">
+      {/* <div className="header">
+        <h2>Booking Details #{bookingId}</h2>
+        <div>
+        <button onClick={() => navigate(`/edit-booking/${bookingId}`)} className="back-btn">
+          Edit Booking
+        </button>&nbsp; 
+        <button onClick={() => navigate(`/bookings`)} className="back-btn">
+          Back to Bookings
+        </button>
+        </div>
+      </div> */}
+
+      <div className="details-container">
+
+         <div className="header">
         <h2>Booking Details #{bookingId}</h2>
         <div>
         <button onClick={() => navigate(`/edit-booking/${bookingId}`)} className="back-btn">
@@ -77,8 +91,6 @@ const ViewBooking = () => {
         </button>
         </div>
       </div>
-
-      <div className="details-container">
         {/* Booking Status */}
         <div className="status-section">
           <div className="status-badges">
@@ -325,6 +337,73 @@ const ViewBooking = () => {
             )}
           </div>
         </section>
+
+        {/* Food Orders */}
+        {bookingData.foodOrders && bookingData.foodOrders.length > 0 && (
+          <section className="detail-section">
+            <h3>Food Orders</h3>
+            <div className="orders-container">
+              {bookingData.foodOrders.map((order, orderIndex) => (
+                <div key={orderIndex} className="order-card">
+                  <div className="order-header">
+                    <div className="order-title">Order #{orderIndex + 1}</div>
+                    <div className="order-meta">
+                      <span className={`status-badge ${order.payment_status?.toLowerCase()}`}>
+                        {order.payment_status || 'N/A'}
+                      </span>
+                      {/* <span className="order-time">
+                        {formatDate(order.created_at)} {formatTime(order.created_at)}
+                      </span> */}
+                    </div>
+                  </div>
+                  
+                  <div className="order-items">
+                    <h4>Items:</h4>
+                    <table className="items-table">
+                      <thead>
+                        <tr>
+                          <th>Item Name</th>
+                          <th>Category</th>
+                          <th>Price</th>
+                          <th>Qty</th>
+                          <th>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {order.items && order.items.map((item, itemIndex) => (
+                          <tr key={itemIndex}>
+                            <td>{item.name}</td>
+                            <td>{item.category || '-'}</td>
+                            <td>₹{item.price}</td>
+                            <td>{item.quantity}</td>
+                            <td>₹{(item.price * item.quantity).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="order-summary">
+                    <div className="summary-row">
+                      <span className="label">Total Amount:</span>
+                      <span className="value">₹{order.total_amount}</span>
+                    </div>
+                    <div className="summary-row">
+                      <span className="label">Amount Paid:</span>
+                      <span className="value positive">₹{order.amount_paid}</span>
+                    </div>
+                    {order.amount_due > 0 && (
+                      <div className="summary-row">
+                        <span className="label">Amount Due:</span>
+                        <span className="value negative">₹{order.amount_due}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

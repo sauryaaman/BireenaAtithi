@@ -56,6 +56,40 @@ const getBookingDetails = async (req, res) =>{
             });
         }
 
+        // Fetch food orders for this booking
+        const { data: foodOrders, error: foodError } = await supabase
+            .from('food_orders')
+            .select(`
+                id,
+                booking_id,
+                status,
+                total_amount,
+                amount_paid,
+                amount_due,
+                payment_status,
+                created_at,
+                updated_at,
+                food_order_items (
+                    id,
+                    menu_item_id,
+                    quantity,
+                    price,
+                    menu_items (
+                        id,
+                        name,
+                        category,
+                        description,
+                        price
+                    )
+                )
+            `)
+            .eq('booking_id', booking_id)
+            .order('created_at', { ascending: false });
+
+        if (foodError) {
+            console.error('Error fetching food orders:', foodError);
+        }
+
        
         
 
@@ -117,7 +151,42 @@ const getBookingDetails = async (req, res) =>{
             guests: {
                 primary: primaryGuest,
                 additional: additionalGuests
-            }
+            },
+            foodOrders: foodOrders ? foodOrders.map(order => ({
+                id: order.id,
+                booking_id: order.booking_id,
+                status: order.status,
+                total_amount: order.total_amount,
+                amount_paid: order.amount_paid,
+                amount_due: order.amount_due,
+                payment_status: order.payment_status,
+                created_at: order.created_at,
+                updated_at: order.updated_at,
+                items: order.food_order_items ? (() => {
+                    // Group items by menu_item_id and sum quantities
+                    const itemsMap = {};
+                    order.food_order_items.forEach(item => {
+                        const menuItemId = item.menu_item_id;
+                        // Get menu item details (handle both array and object formats)
+                        const menuItemDetails = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
+                        if (!itemsMap[menuItemId]) {
+                            itemsMap[menuItemId] = {
+                                id: item.id,
+                                menu_item_id: item.menu_item_id,
+                                name: menuItemDetails?.name || item.menu_item_id,
+                                category: menuItemDetails?.category,
+                                description: menuItemDetails?.description,
+                                price: item.price,
+                                quantity: item.quantity
+                            };
+                        } else {
+                            // Add quantity to existing item
+                            itemsMap[menuItemId].quantity += item.quantity;
+                        }
+                    });
+                    return Object.values(itemsMap);
+                })() : []
+            })) : []
         };
 
         res.json(Data);
